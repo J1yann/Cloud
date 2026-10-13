@@ -2,11 +2,17 @@ package cloud.music.service
 
 import androidx.annotation.MainThread
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Timeline
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -19,6 +25,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import cloud.music.catalog.CloudLibrary
+import cloud.music.catalog.CloudPage
+import cloud.music.catalog.CloudTrack
+import cloud.music.catalog.YouTubeMusicMetadata
+import cloud.music.playback.radioMediaItem
 import cloud.music.storage.db.MusicDatabase
 import cloud.music.storage.preference.ConfigPreferences
 import cloud.music.utils.toMediaItem
@@ -58,6 +69,15 @@ class PlayerControllerImpl(
     private val queueMutex = Mutex()
 
     private var audioSessionId = 0
+    private var radioJob: Job? = null
+    private var radioGeneration = 0L
+    private var radioSeed: String? = null
+    private var radioContinuation: String? = null
+    private var radioPending = emptyList<CloudTrack>()
+    private var radioStarted = false
+    private var radioExhausted = false
+    private var radioRetryAfterMillis = 0L
+    private var autoplayEnabled = ConfigPreferences.autoplay
 
     init {
         player.playWhenReady = false
@@ -80,6 +100,8 @@ class PlayerControllerImpl(
                     }
 
                     Player.STATE_ENDED -> {
+                        _playState.value = PlayState.Pause
+                        requestRadioIfNeeded()
                     }
                 }
             }
@@ -87,6 +109,7 @@ class PlayerControllerImpl(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 super.onIsPlayingChanged(isPlaying)
                 if (isPlaying) {
+                    requestRadioIfNeeded()
                     player.currentMediaItem?.mediaId?.takeIf { it.startsWith("3#") }?.let {
                         cloud.music.catalog.CloudLibrary.played(it.substringAfter("#"))
                     }
@@ -98,12 +121,22 @@ class PlayerControllerImpl(
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 super.onMediaItemTransition(mediaItem, reason)
+                invalidateRadio(resetSession = false)
                 mediaItem ?: return
                 val playlist = _playlist.value
-                _currentSong.value = playlist.find { it.mediaId == mediaItem.mediaId }
+                _currentSong.value = playlist.find { it.mediaId == mediaItem.mediaId } ?: mediaItem
+                requestRadioIfNeeded()
                 if (player.isPlaying && mediaItem.mediaId.startsWith("3#")) {
                     cloud.music.catalog.CloudLibrary.played(mediaItem.mediaId.substringAfter("#"))
                 }
+            }
+
+            override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                requestRadioIfNeeded()
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (playWhenReady) requestRadioIfNeeded() else invalidateRadio(resetSession = false)
             }
 
             @OptIn(UnstableApi::class)
@@ -162,6 +195,12 @@ class PlayerControllerImpl(
 
         launch {
             while (isActive) {
+                if (autoplayEnabled != ConfigPreferences.autoplay) {
+                    autoplayEnabled = ConfigPreferences.autoplay
+                    invalidateRadio(resetSession = true)
+                    applyPlayMode(_playMode.value)
+                }
+                requestRadioIfNeeded()
                 if (player.isPlaying) {
                     _playProgress.value = player.currentPosition
                 }
@@ -172,6 +211,7 @@ class PlayerControllerImpl(
 
     @MainThread
     override fun addAndPlay(song: MediaItem) {
+        invalidateRadio(resetSession = true)
         launch(Dispatchers.Main.immediate) {
             queueMutex.withLock {
                 val newPlaylist = _playlist.value.toMutableList()
@@ -190,6 +230,7 @@ class PlayerControllerImpl(
 
     @MainThread
     override fun enqueue(song: MediaItem) {
+        invalidateRadio(resetSession = true)
         launch(Dispatchers.Main.immediate) {
             queueMutex.withLock {
                 if (_playlist.value.any { it.mediaId == song.mediaId }) return@launch
@@ -197,12 +238,14 @@ class PlayerControllerImpl(
                 withContext(Dispatchers.IO) { db.playlistDao().insertAll(listOf(song.toSongEntity())) }
                 _playlist.value = queue
                 player.addMediaItem(song)
+                requestRadioIfNeeded()
             }
         }
     }
 
     @MainThread
     override fun replaceAll(songList: List<MediaItem>, song: MediaItem) {
+        invalidateRadio(resetSession = true)
         launch(Dispatchers.Main.immediate) {
             queueMutex.withLock {
                 withContext(Dispatchers.IO) {
@@ -220,6 +263,7 @@ class PlayerControllerImpl(
 
     @MainThread
     override fun play(mediaId: String) {
+        invalidateRadio(resetSession = true)
         val playlist = _playlist.value
         if (playlist.isEmpty()) {
             return
@@ -237,10 +281,12 @@ class PlayerControllerImpl(
         _currentSong.value = playlist[index]
         _playProgress.value = 0
         _bufferingPercent.value = 0
+        requestRadioIfNeeded()
     }
 
     @MainThread
     override fun delete(song: MediaItem) {
+        invalidateRadio(resetSession = true)
         launch(Dispatchers.Main.immediate) {
             queueMutex.withLock {
                 val playlist = _playlist.value.toMutableList()
@@ -255,6 +301,7 @@ class PlayerControllerImpl(
                         db.playlistDao().delete(song.toSongEntity())
                     }
                     player.removeMediaItem(index)
+                    requestRadioIfNeeded()
                 }
             }
         }
@@ -262,6 +309,7 @@ class PlayerControllerImpl(
 
     @MainThread
     override fun clearPlaylist() {
+        invalidateRadio(resetSession = true)
         launch(Dispatchers.Main.immediate) {
             queueMutex.withLock {
                 clearQueueLocked()
@@ -303,9 +351,13 @@ class PlayerControllerImpl(
             }
 
             Player.STATE_ENDED -> {
-                player.seekToNextMediaItem()
+                invalidateRadio(resetSession = false)
+                // An explicit Play tap restarts a finished final item when there is no next item.
+                if (player.hasNextMediaItem()) player.seekToNextMediaItem() else player.seekTo(0L)
                 player.prepare()
                 player.play()
+                _playProgress.value = 0
+                _bufferingPercent.value = 0
             }
         }
     }
@@ -313,6 +365,18 @@ class PlayerControllerImpl(
     @MainThread
     override fun next() {
         if (player.mediaItemCount == 0) return
+        if (!player.hasNextMediaItem()) {
+            if (ConfigPreferences.autoplay &&
+                (_playMode.value == PlayMode.Sequential || _playMode.value == PlayMode.Shuffle) &&
+                player.currentMediaItem?.mediaId?.startsWith("3#") == true) {
+                // Keep a pending radio fetch; seeking to a nonexistent next item leaves STATE_ENDED stuck.
+                if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                player.play()
+                requestRadioIfNeeded()
+            }
+            return
+        }
+        invalidateRadio(resetSession = true)
         player.seekToNextMediaItem()
         player.prepare()
         player.play()
@@ -322,6 +386,7 @@ class PlayerControllerImpl(
 
     @MainThread
     override fun prev() {
+        invalidateRadio(resetSession = true)
         if (player.mediaItemCount == 0) return
         player.seekToPreviousMediaItem()
         player.prepare()
@@ -346,14 +411,24 @@ class PlayerControllerImpl(
     override fun setPlayMode(mode: PlayMode) {
         ConfigPreferences.playMode = mode.value
         _playMode.value = mode
+        invalidateRadio(resetSession = true)
+        applyPlayMode(mode)
+        requestRadioIfNeeded()
+    }
+
+    private fun applyPlayMode(mode: PlayMode) {
         when (mode) {
+            PlayMode.Sequential -> {
+                player.repeatMode = Player.REPEAT_MODE_OFF
+                player.shuffleModeEnabled = false
+            }
             PlayMode.Loop -> {
                 player.repeatMode = Player.REPEAT_MODE_ALL
                 player.shuffleModeEnabled = false
             }
 
             PlayMode.Shuffle -> {
-                player.repeatMode = Player.REPEAT_MODE_ALL
+                player.repeatMode = if (ConfigPreferences.autoplay) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
                 player.shuffleModeEnabled = true
             }
 
@@ -364,8 +439,125 @@ class PlayerControllerImpl(
         }
     }
 
+    private fun invalidateRadio(resetSession: Boolean) {
+        radioGeneration += 1
+        radioJob?.cancel()
+        radioJob = null
+        if (resetSession) {
+            radioSeed = null
+            radioContinuation = null
+            radioStarted = false
+            radioPending = emptyList()
+            radioExhausted = false
+            radioRetryAfterMillis = 0
+        }
+    }
+
+    /** Count the real upcoming items, respecting Media3's shuffle order but ignoring repetition. */
+    private fun nearQueueEnd(): Boolean {
+        val timeline = player.currentTimeline
+        var index = player.currentMediaItemIndex
+        if (timeline.isEmpty || index !in 0 until timeline.windowCount) return false
+        var remaining = 0
+        repeat(3) {
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET) return remaining <= 2
+            remaining += 1
+        }
+        return false
+    }
+
+    private fun eligibleForRadio(): Boolean =
+        ConfigPreferences.autoplay && player.playWhenReady &&
+            (_playMode.value == PlayMode.Sequential || _playMode.value == PlayMode.Shuffle) &&
+            player.currentMediaItem?.mediaId?.startsWith("3#") == true && nearQueueEnd()
+
+    /** Append to the user's queue; recommendations never replace album order or seed from history. */
+    private fun requestRadioIfNeeded() {
+        if (!eligibleForRadio() || radioJob?.isActive == true ||
+            System.currentTimeMillis() < radioRetryAfterMillis) return
+        val currentId = player.currentMediaItem?.mediaId ?: return
+        val videoId = currentId.substringAfter("#")
+        if (radioExhausted) {
+            if (radioSeed == videoId) return
+            // A finished radio without continuation can be renewed from the song now playing.
+            invalidateRadio(resetSession = true)
+        }
+        if (!Regex("[A-Za-z0-9_-]{11}").matches(videoId)) return
+        if (radioSeed == null) radioSeed = videoId
+        val seed = radioSeed ?: return
+        val generation = radioGeneration
+        val startingContinuation = if (radioStarted) radioContinuation else null
+        radioJob = launch(start = CoroutineStart.LAZY) {
+            try {
+                var token = startingContinuation
+                // A radio page may include an entire existing album; walk up to three pages for fresh songs.
+                repeat(3) {
+                    val page = if (radioPending.isNotEmpty()) CloudPage(radioPending, radioContinuation)
+                        else YouTubeMusicMetadata.instance.radio(seed, token)
+                    queueMutex.withLock {
+                        if (generation != radioGeneration || player.currentMediaItem?.mediaId != currentId ||
+                            !eligibleForRadio()) return@launch
+                        val queuedIds = _playlist.value.map { it.mediaId.substringAfter("#") }.toHashSet()
+                        val fresh = page.items.filter { it.allowsPlayback && it.id !in queuedIds && it.id != videoId }
+                            .distinctBy { it.id }
+                        val additions = fresh.take(10)
+                        if (additions.isNotEmpty()) {
+                            val items = additions.map { it.radioMediaItem() }
+                            val firstAddedIndex = _playlist.value.size
+                            // Queue persistence and its UI update form one commit even if this job is cancelled.
+                            withContext(NonCancellable) {
+                                withContext(Dispatchers.IO) {
+                                    db.playlistDao().insertAll(items.map { it.toSongEntity() })
+                                }
+                                if (generation != radioGeneration || player.currentMediaItem?.mediaId != currentId ||
+                                    !eligibleForRadio()) {
+                                    withContext(Dispatchers.IO) { items.forEach { db.playlistDao().delete(it.toSongEntity()) } }
+                                    return@withContext
+                                }
+                                additions.forEach(CloudLibrary::remember)
+                                radioStarted = true
+                                radioContinuation = page.next
+                                radioPending = fresh.drop(additions.size)
+                                val resumeAfterEnd = player.playbackState == Player.STATE_ENDED && player.playWhenReady
+                                _playlist.value = _playlist.value + items
+                                player.addMediaItems(items)
+                                radioRetryAfterMillis = 0
+                                radioExhausted = page.next == null && radioPending.isEmpty()
+                                if (resumeAfterEnd) {
+                                    player.seekTo(firstAddedIndex, 0)
+                                    player.prepare()
+                                    player.play()
+                                }
+                            }
+                            return@launch
+                        }
+                        radioStarted = true
+                        radioContinuation = page.next
+                        radioPending = emptyList()
+                        if (page.next == null || page.next == token) {
+                            radioExhausted = true
+                            return@launch
+                        }
+                    }
+                    token = page.next
+                }
+                radioRetryAfterMillis = System.currentTimeMillis() + 60_000
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Offline recommendations leave the explicit queue playable and retry on a later tick.
+                if (generation == radioGeneration) radioRetryAfterMillis = System.currentTimeMillis() + 60_000
+            } finally {
+                if (generation == radioGeneration) radioJob = null
+            }
+        }
+        radioJob?.start()
+    }
+
     @MainThread
     override fun stop() {
+        invalidateRadio(resetSession = true)
         player.stop()
         _playState.value = PlayState.Idle
     }

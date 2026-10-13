@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="@dimen/play_bar_height"
-    android:background="@color/play_bar_bg"
+    android:background="?attr/cloudPlayerBarColor"
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
@@ -38,7 +38,7 @@
             android:ellipsize="end"
             android:singleLine="true"
             android:text="@string/no_playing_song"
-            android:textColor="@color/common_text_h1_color"
+            android:textColor="?attr/cloudTextPrimary"
             android:textSize="15dp" />
     </LinearLayout>
 
@@ -52,9 +52,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:progress="75"
-            app:indicatorColor="@color/common_text_h1_color"
+            app:indicatorColor="?attr/cloudTextPrimary"
             app:indicatorSize="28dp"
-            app:trackColor="@color/common_divider"
+            app:trackColor="?attr/cloudDividerColor"
             app:trackCornerRadius="1dp"
             app:trackThickness="2dp" />
 
@@ -65,7 +65,7 @@
             android:layout_gravity="center"
             android:contentDescription="@null"
             android:src="@drawable/ic_play_bar_play_pause_selector"
-            app:tint="@color/common_text_h1_color" />
+            app:tint="?attr/cloudTextPrimary" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/loadingProgress"
@@ -85,7 +85,7 @@
         android:contentDescription="@null"
         android:padding="10dp"
         android:src="@drawable/ic_next"
-        app:tint="@color/common_text_h1_color" />
+        app:tint="?attr/cloudTextPrimary" />
 
     <ImageView
         android:id="@+id/ivPlaylist"
@@ -94,5 +94,5 @@
         android:contentDescription="@null"
         android:padding="10dp"
         android:src="@drawable/ic_playlist"
-        app:tint="@color/common_text_h1_color" />
+        app:tint="?attr/cloudTextPrimary" />
 </LinearLayout>

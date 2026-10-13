@@ -10,9 +10,9 @@
     android:gravity="center_vertical"
     android:paddingHorizontal="10dp"
     android:text="Search tracks, artists, and playlists"
-    android:textColor="@color/common_text_h2_color"
+    android:textColor="?attr/cloudTextSecondary"
     android:textSize="14dp"
     app:drawableStartCompat="@drawable/ic_menu_search"
-    app:drawableTint="@color/common_text_h2_color"
+    app:drawableTint="?attr/cloudTextSecondary"
     app:shape_radius="100dp"
-    app:shape_solidColor="@color/common_divider" />
+    app:shape_solidColor="?attr/cloudDividerColor" />

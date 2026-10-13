@@ -14,7 +14,7 @@
         app:tlTitleText="" />
 
     <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
+ android:scrollbars="none"        android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <LinearLayout
@@ -45,7 +45,7 @@
                     android:gravity="center"
                     android:text="Cloud — music in your hands"
                     app:shape_radius="12dp"
-                    app:shape_solidColor="@color/common_divider" />
+                    app:shape_solidColor="?attr/cloudDividerColor" />
             </FrameLayout>
 
             <LinearLayout
@@ -63,7 +63,7 @@
                     android:drawablePadding="2dp"
                     android:gravity="center_horizontal"
                     android:text="For you"
-                    android:textColor="@color/common_text_h1_color"
+                    android:textColor="?attr/cloudTextPrimary"
                     android:textSize="12dp"
                     app:drawableTint="@color/common_theme_color"
                     app:drawableTopCompat="@drawable/ic_recommend" />
@@ -76,7 +76,7 @@
                     android:drawablePadding="2dp"
                     android:gravity="center_horizontal"
                     android:text="Radio"
-                    android:textColor="@color/common_text_h1_color"
+                    android:textColor="?attr/cloudTextPrimary"
                     android:textSize="12dp"
                     app:drawableTint="@color/common_theme_color"
                     app:drawableTopCompat="@drawable/ic_radio" />
@@ -89,7 +89,7 @@
                     android:drawablePadding="2dp"
                     android:gravity="center_horizontal"
                     android:text="Playlist"
-                    android:textColor="@color/common_text_h1_color"
+                    android:textColor="?attr/cloudTextPrimary"
                     android:textSize="12dp"
                     app:drawableTint="@color/common_theme_color"
                     app:drawableTopCompat="@drawable/ic_discovery_playlist" />
@@ -102,7 +102,7 @@
                     android:drawablePadding="2dp"
                     android:gravity="center_horizontal"
                     android:text="Trending"
-                    android:textColor="@color/common_text_h1_color"
+                    android:textColor="?attr/cloudTextPrimary"
                     android:textSize="12dp"
                     app:drawableTint="@color/common_theme_color"
                     app:drawableTopCompat="@drawable/ic_discovery_rank" />
@@ -115,14 +115,14 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="16dp"
                 android:text="Featured playlists"
-                android:textColor="@color/common_text_h1_color"
+                android:textColor="?attr/cloudTextPrimary"
                 android:textSize="17dp"
                 android:textStyle="bold"
                 app:drawableEndCompat="@drawable/ic_arrow_right"
-                app:drawableTint="@color/common_text_h1_color" />
+                app:drawableTint="?attr/cloudTextPrimary" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvRecommendPlaylist"
+ android:scrollbars="none"                android:id="@+id/rvRecommendPlaylist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -138,11 +138,11 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="16dp"
                 android:text="Trending"
-                android:textColor="@color/common_text_h1_color"
+                android:textColor="?attr/cloudTextPrimary"
                 android:textSize="17dp"
                 android:textStyle="bold"
                 app:drawableEndCompat="@drawable/ic_arrow_right"
-                app:drawableTint="@color/common_text_h1_color" />
+                app:drawableTint="?attr/cloudTextPrimary" />
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/vpRankingList"

@@ -1,0 +1,25 @@
+<resources>
+    <style name="AppTheme.Amoled" parent="AppTheme">
+        <item name="cloudBackgroundColor">#000000</item>
+        <item name="cloudSurfaceColor">#0D0D10</item>
+        <item name="cloudDialogColor">#0D0D10</item>
+        <item name="cloudNavColor">#000000</item>
+        <item name="cloudPlayerBarColor">#08080A</item>
+        <item name="cloudDividerColor">#25252B</item>
+        <item name="cloudTextPrimary">#F5F5FA</item>
+        <item name="cloudTextSecondary">#A5A5AF</item>
+        <item name="cloudAccentColor">#A4D4ED</item>
+        <item name="cloudAccentSoft">#14232C</item>
+        <item name="cloudHeroStart">#071016</item>
+        <item name="cloudHeroEnd">#0D202B</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+    <style name="AppTheme.Amoled.Popup" parent="AppTheme.Amoled">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@style/AnimationPopup</item>
+    </style>
+</resources>

@@ -7,7 +7,7 @@
     android:layout_gravity="bottom"
     android:minHeight="300dp"
     android:orientation="vertical"
-    app:shape_solidColor="@color/card_bg"
+    app:shape_solidColor="?attr/cloudSurfaceColor"
     app:shape_radiusInTopLeft="16dp"
     app:shape_radiusInTopRight="16dp">
 
@@ -18,7 +18,7 @@
         android:layout_marginTop="16dp"
         android:paddingHorizontal="16dp"
         android:text="Play queue"
-        android:textColor="@color/common_text_h1_color"
+        android:textColor="?attr/cloudTextPrimary"
         android:textSize="18dp"
         android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
             android:orientation="horizontal"
             android:paddingHorizontal="10dp"
             app:shape_radius="100dp"
-            app:shape_strokeColor="@color/common_divider"
+            app:shape_strokeColor="?attr/cloudDividerColor"
             app:shape_strokeSize="1dp">
 
             <ImageView
@@ -47,7 +47,7 @@
                 android:layout_height="24dp"
                 android:layout_centerVertical="true"
                 android:src="@drawable/ic_play_mode_level_list"
-                app:tint="@color/common_text_h1_color" />
+                app:tint="?attr/cloudTextPrimary" />
 
             <TextView
                 android:id="@+id/tvPlayMode"
@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:text="Repeat all"
-                android:textColor="@color/common_text_h1_color"
+                android:textColor="?attr/cloudTextPrimary"
                 android:textSize="12dp" />
         </com.hjq.shape.layout.ShapeLinearLayout>
 
@@ -67,17 +67,17 @@
             android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_delete"
-            app:tint="@color/common_text_h2_color" />
+            app:tint="?attr/cloudTextSecondary" />
     </FrameLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="@dimen/common_divider_size"
         android:layout_marginHorizontal="16dp"
-        android:background="@color/common_divider" />
+        android:background="?attr/cloudDividerColor" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+ android:scrollbars="none"        android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:listitem="@layout/item_current_playlist" />

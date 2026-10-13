@@ -146,7 +146,6 @@ dependencies {
     // implementation(project(":common"))
     ksp(libs.crouter.processor)
     implementation(libs.crouter.api)
-    implementation(libs.lrcview)
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(libs.loggingInterceptor)

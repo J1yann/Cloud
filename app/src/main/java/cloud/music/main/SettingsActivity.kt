@@ -65,6 +65,7 @@ class SettingsActivity : BaseMusicActivity() {
 
             initDarkMode()
             initSoundEffect()
+            initAutoplay()
             initFilter()
         }
 
@@ -73,6 +74,8 @@ class SettingsActivity : BaseMusicActivity() {
             setDivider(null)
             listView.setPadding(0, 0, 0, (24 * resources.displayMetrics.density).toInt())
             listView.clipToPadding = false
+            listView.isVerticalScrollBarEnabled = false
+            listView.isHorizontalScrollBarEnabled = false
         }
 
         override fun onDisplayPreferenceDialog(preference: Preference) {
@@ -112,6 +115,11 @@ class SettingsActivity : BaseMusicActivity() {
             }
         }
 
+
+        private fun initAutoplay() {
+            val autoplay = findPreference<ListPreference>("auto_next") ?: return
+            autoplay.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
+        }
 
         private fun initSoundEffect() {
             soundEffect.setOnPreferenceClickListener {

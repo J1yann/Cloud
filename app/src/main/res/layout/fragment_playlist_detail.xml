@@ -15,7 +15,7 @@
             android:id="@+id/appBarLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/common_background_color"
+            android:background="?attr/cloudBackgroundColor"
             app:elevation="0dp">
 
             <com.google.android.material.appbar.CollapsingToolbarLayout
@@ -167,14 +167,14 @@
                     android:paddingHorizontal="16dp"
                     app:shape_radiusInTopLeft="12dp"
                     app:shape_radiusInTopRight="12dp"
-                    app:shape_solidColor="@color/common_background_color">
+                    app:shape_solidColor="?attr/cloudBackgroundColor">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:drawablePadding="10dp"
                         android:text="Play all"
-                        android:textColor="@color/common_text_h1_color"
+                        android:textColor="?attr/cloudTextPrimary"
                         android:textSize="16dp"
                         android:textStyle="bold"
                         app:drawableStartCompat="@drawable/ic_play_circle"
@@ -185,7 +185,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:textColor="@color/common_text_h2_color"
+                        android:textColor="?attr/cloudTextSecondary"
                         android:textSize="14dp"
                         tools:text="(155)" />
                 </com.hjq.shape.layout.ShapeLinearLayout>
@@ -193,7 +193,7 @@
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerView"
+ android:scrollbars="none"            android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

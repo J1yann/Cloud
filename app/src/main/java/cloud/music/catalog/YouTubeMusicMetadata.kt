@@ -51,6 +51,26 @@ class YouTubeMusicMetadata {
         parser.playlists(search(query, ALBUMS, next))
 
     suspend fun home(): CloudPage<CloudSection> = parser.sections(browse("FEmusic_home"))
+
+    suspend fun discover(destination: CloudDestination, next: String? = null): CloudPage<CloudSection> {
+        val body = if (next != null) obj("continuation" to next) else obj("browseId" to validBrowseId(destination.id)).apply {
+            if (destination.params.isNotBlank()) addProperty("params", destination.params)
+        }
+        return parser.sections(request("browse", body))
+    }
+
+    suspend fun newReleases(): CloudPage<CloudSection> = discover(CloudDestination("FEmusic_new_releases", "New releases"))
+    suspend fun moodsAndGenres(): CloudPage<CloudSection> = discover(CloudDestination("FEmusic_moods_and_genres", "Moods & genres"))
+
+    /** An exact-seed recommendation queue, also used when sequential playback reaches its end. */
+    suspend fun radio(videoId: String, next: String? = null): CloudPage<CloudTrack> {
+        requireVideoId(videoId)
+        val body = if (next != null) obj("continuation" to next) else obj(
+            "videoId" to videoId, "playlistId" to "RDAMVM$videoId", "params" to "wAEB",
+            "isAudioOnly" to true, "enablePersistentPlaylistPanel" to true,
+        )
+        return parser.tracks(request("next", body))
+    }
     suspend fun trending(next: String? = null): CloudPage<CloudTrack> {
         if (next != null) return parser.tracks(browse("FEmusic_charts", next))
         val charts = browse("FEmusic_charts")

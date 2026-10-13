@@ -8,19 +8,19 @@
   <a href="https://github.com/J1yann/Cloud/releases/latest"><img src="https://img.shields.io/github/v/release/J1yann/Cloud?color=346E8B" alt="Latest release" /></a>
 </p>
 
-<p align="center">An Android music player for YouTube Music discovery, personal playlists, and everyday listening.</p>
+<p align="center">Listen to YouTube Music without signing in. Discover songs, build playlists, and keep listening with Cloud.</p>
 <p align="center"><a href="https://github.com/J1yann/Cloud/releases/latest"><strong>Download the APK</strong></a> · <a href="https://github.com/J1yann/Cloud/issues">Report an issue</a></p>
 
 ## Your music, within reach
 
 | Discover | Listen | Make it yours |
 | --- | --- | --- |
-| Artwork shelves, curated playlists, and trending tracks | Media3 playback, queues, shuffle, and repeat | Likes, personal playlists, and listening history |
-| Search tracks, artists, and playlists | Background audio and notification controls | Local music, appearance settings, and a sleep timer |
+| Discovery shelves, new releases, charts, moods, and genres | Background playback, queues, shuffle, and repeat | Likes, personal playlists, and listening history |
+| Search songs, artists, albums, and playlists | Related songs keep playing when your queue ends | Local music, AMOLED mode, and a sleep timer |
 
-Your library stays on your device. Cloud fetches catalog data and resolves audio
-streams on the device; no separate streaming server is required. Availability
-depends on YouTube and your network.
+Start listening without an account, sign-in, or separate server setup. Your library
+stays on your device. Cloud fetches catalog data and resolves audio streams on the
+device. Availability depends on YouTube and your network.
 
 ## Install
 
@@ -37,7 +37,9 @@ audio on the device, and Media3 handles playback, queues, and notifications.
 Track IDs stay consistent from search through playback; Cloud does not choose a
 replacement recording by title.
 
-Synchronized lyrics are loaded when available, with plain-text lyrics as a fallback.
+Word-by-word lyrics highlight in time with the music when word timestamps are
+available. Line-synchronized and plain-text lyrics provide a fallback. Tap a timed
+line to seek, or scroll freely through the lyrics.
 Cloud uses undocumented service interfaces, so upstream changes can affect browsing
 or playback. This app does not provide access to recordings unavailable to your connection.
 
@@ -48,7 +50,8 @@ Discovery and player presentation draw inspiration from
 [SimpMusic](https://github.com/maxrave-dev/SimpMusic).
 [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) provides audio
 extraction, [Media3](https://github.com/androidx/media) handles playback, and
-[LRCLIB](https://lrclib.net) provides lyrics.
+[BetterLyrics](https://github.com/better-lyrics/better-lyrics) and
+[LRCLIB](https://lrclib.net) provide lyrics.
 
 Cloud is an independent app and is not affiliated with YouTube or Google.
 See [third-party credits](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).

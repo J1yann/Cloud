@@ -4,6 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.net.Uri
 import android.view.View
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
+import cloud.music.utils.ImageUtils.loadCover
 import android.view.inputmethod.EditorInfo
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -15,7 +19,7 @@ import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
 import android.widget.ProgressBar
-import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.widget.doAfterTextChanged
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
@@ -30,14 +34,17 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import cloud.music.common.BaseMusicFragment
 import cloud.music.common.configureBrowserInsets
+import cloud.music.common.getCloudColor
 import top.wangchenyan.common.ui.activity.BaseActivity
 import cloud.music.R
 import cloud.music.main.MainActivity
 import cloud.music.consts.RoutePath
 import cloud.music.service.PlayServiceModule.playerController
+import cloud.music.service.PlayServiceModule
 import cloud.music.service.PlayMode
 import me.wcy.router.CRouter
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import top.wangchenyan.common.ext.toast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -60,6 +67,14 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private val chips = mutableListOf<TextView>()
     private var query = ""
     private var kind = 0
+    private var discovery: CloudDestination? = null
+    private val discoveryTrail = mutableListOf<CloudDestination>()
+    private var displayedArtist: CloudArtist? = null
+    private var playbackCollection: List<CloudTrack>? = null
+    private var collectionObserver: Job? = null
+    private val collectionRows = mutableListOf<CollectionRow>()
+
+    private data class CollectionRow(val item: CloudTrack, val number: Int, val marker: TextView, val title: TextView)
 
     override fun isLazy(): Boolean = false
 
@@ -118,6 +133,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             }
             column.addView(HorizontalScrollView(requireContext()).apply {
                 isHorizontalScrollBarEnabled = false
+                isVerticalScrollBarEnabled = false
                 addView(controls)
             })
             input.setOnEditorActionListener { _, action, event ->
@@ -139,7 +155,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 }
             }
         }
-        val scroll = ScrollView(requireContext()).apply { isFillViewport = true; clipToPadding = false }
+        val scroll = ScrollView(requireContext()).apply {
+            isFillViewport = true; clipToPadding = false
+            isVerticalScrollBarEnabled = false; isHorizontalScrollBarEnabled = false
+        }
         results = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(24))
@@ -166,6 +185,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun searchWelcome() {
+        clearCollectionRows()
+        displayedArtist = null
+        discovery = null
+        discoveryTrail.clear()
         results?.removeAllViews()
         heading("What are you in the mood for?")
         results?.addView(label("Search songs, artists, albums and playlists from YouTube Music.", 14f, secondary = true).apply {
@@ -177,16 +200,15 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 results?.addView(action(term) { searchInput?.setText(term); submitSearch() })
             }
         }
-        heading("Explore a mood")
-        listOf("Indie", "Electronic", "Hip hop", "Ambient").forEach { term ->
-            results?.addView(action(term) {
-                searchInput?.setText(term); submitSearch()
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(54)).apply { bottomMargin = dp(10) })
-        }
+        heading("Browse something new")
+        discoveryNavigation()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        PlayServiceModule.isPlayerReady.observe(viewLifecycleOwner) { ready ->
+            if (ready == true && collectionRows.isNotEmpty()) observeCollectionPlayback()
+        }
         if (activity !is MainActivity) {
             (activity as? BaseActivity)?.configureBrowserInsets()
         }
@@ -198,13 +220,17 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun home() {
+        clearCollectionRows()
+        displayedArtist = null
+        discovery = null
+        discoveryTrail.clear()
         openedPlaylist = null
         results?.removeAllViews()
         val heroCover = artwork("", "Featured artwork", 100).apply { alpha = 0.9f }
         val hero = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xff173b65.toInt(), 0xff346e8b.toInt())).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(color(R.color.cloud_hero_start), color(R.color.cloud_hero_end))).apply {
                 cornerRadius = dp(22).toFloat()
             }
             setPadding(dp(22), dp(24), dp(18), dp(24))
@@ -221,17 +247,21 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                     if (main != null) main.openSearch()
                     else CRouter.with(requireActivity()).url(RoutePath.SEARCH).start()
                 }.apply {
-                    background = ripple(0xffe9f5fd.toInt(), 22)
-                    setTextColor(0xff173b65.toInt())
+                    background = ripple(color(R.color.card_bg), 22)
+                    setTextColor(color(R.color.common_text_h1_color))
                 }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)).apply { topMargin = dp(16) })
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             addView(heroCover, LinearLayout.LayoutParams(dp(100), dp(100)))
         }
         results?.addView(hero)
+        heading("Explore")
+        discoveryNavigation()
         val recent = CloudLibrary.history().take(3)
         if (recent.isNotEmpty()) { heading("Jump back in"); recent.forEach(::trackRow) }
         val feedSlot = sectionSlot("Made for discovery")
+        val releasesSlot = sectionSlot("New releases")
         val trendingSlot = sectionSlot("Trending now")
+        val moodsSlot = sectionSlot("Moods & genres")
         val seed = recent.firstOrNull()
         val relatedSlot = seed?.let { sectionSlot("More like ${it.title}") }
         request(clear = false) {
@@ -242,15 +272,27 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                         inSection(feedSlot) {
                             feedSlot.removeAllViews()
                             if (feed.items.isEmpty()) heading("No selections right now")
-                            feed.items.forEach { section ->
-                                heading(section.title)
-                                playlistRail(section.playlists.items)
-                                section.tracks.items.take(8).forEach(::trackRow)
-                                section.artists.items.forEach { artist -> artistRow(artist) }
+                            feed.items.forEach { section -> renderSection(section, compact = true) }
+                            feed.next?.let {
+                                results?.addView(action("More to discover") {
+                                    openDiscovery(CloudDestination("FEmusic_home", "Discover"))
+                                })
                             }
                         }
                     } catch (e: CancellationException) { throw e }
                     catch (e: Exception) { sectionError(feedSlot, "Made for discovery", e) }
+                }
+                launch {
+                    try {
+                        val releases = metadata.newReleases()
+                        inSection(releasesSlot) {
+                            releasesSlot.removeAllViews()
+                            releases.items.take(2).forEach { renderSection(it, compact = true) }
+                            if (releases.items.isEmpty()) heading("No new releases right now")
+                            results?.addView(action("Browse new releases") { openDiscovery(NEW_RELEASES) })
+                        }
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { sectionError(releasesSlot, "New releases", e) }
                 }
                 launch {
                     try {
@@ -261,10 +303,22 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                         inSection(trendingSlot) {
                             trendingSlot.removeAllViews(); heading("Trending now")
                             if (trending.items.isEmpty()) results?.addView(label("No trending tracks right now.", 14f, secondary = true))
-                            trending.items.take(20).forEach(::trackRow)
+                            trending.items.take(8).forEach(::trackRow)
+                            results?.addView(action("See the charts") { openDiscovery(CHARTS) })
                         }
                     } catch (e: CancellationException) { throw e }
                     catch (e: Exception) { sectionError(trendingSlot, "Trending", e) }
+                }
+                launch {
+                    try {
+                        val moods = metadata.moodsAndGenres()
+                        inSection(moodsSlot) {
+                            moodsSlot.removeAllViews()
+                            moods.items.forEach { renderSection(it, compact = true) }
+                            results?.addView(action("All moods & genres") { openDiscovery(MOODS) })
+                        }
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { sectionError(moodsSlot, "Moods & genres", e) }
                 }
                 if (seed != null && relatedSlot != null) launch {
                     try {
@@ -276,6 +330,85 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                     } catch (e: CancellationException) { throw e }
                     catch (e: Exception) { sectionError(relatedSlot, "Recommendations", e) }
                 }
+            }
+        }
+    }
+
+    private fun discoveryNavigation() {
+        destinationGrid(listOf(NEW_RELEASES, CHARTS, MOODS))
+    }
+
+    private fun destinationGrid(destinations: List<CloudDestination>) {
+        destinations.chunked(2).forEach { pair ->
+            val line = LinearLayout(requireContext())
+            pair.forEachIndexed { index, destination ->
+                val tile = label(destination.title, 15f, true).apply {
+                    setPadding(dp(18), dp(12), dp(14), dp(12))
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = if (destination.color != 0) GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(ColorUtils.blendARGB(color(R.color.card_bg), destination.color, 0.22f), color(R.color.card_bg)),
+                    ).apply { cornerRadius = dp(16).toFloat() } else ripple(color(R.color.card_bg), 16)
+                    setOnClickListener { openDiscovery(destination) }
+                }
+                line.addView(tile, LinearLayout.LayoutParams(0, dp(70), 1f).apply {
+                    if (index > 0) marginStart = dp(10)
+                })
+            }
+            if (pair.size == 1) line.addView(View(requireContext()), LinearLayout.LayoutParams(0, dp(70), 1f).apply { marginStart = dp(10) })
+            results?.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)).apply { bottomMargin = dp(10) })
+        }
+    }
+
+    private fun renderSection(section: CloudSection, compact: Boolean = false) {
+        heading(section.title)
+        if (section.destinations.isNotEmpty()) destinationGrid(if (compact) section.destinations.take(6) else section.destinations)
+        playlistRail(if (compact) section.playlists.items.take(10) else section.playlists.items)
+        (if (compact) section.tracks.items.take(6) else section.tracks.items).forEach(::trackRow)
+        (if (compact) section.artists.items.take(6) else section.artists.items).forEach(::artistRow)
+        section.destination?.let { destination ->
+            results?.addView(action("See all ${section.title.lowercase()}") { openDiscovery(destination) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44)).apply { bottomMargin = dp(6) })
+        }
+    }
+
+    private fun openDiscovery(destination: CloudDestination, next: String? = null) {
+        displayedArtist = null
+        openedPlaylist = null
+        if (next == null) {
+            clearCollectionRows()
+            if (discovery != null && discovery != destination) discoveryTrail.add(discovery!!)
+            discovery = destination
+            results?.removeAllViews()
+            nextButton = null
+            results?.addView(action(if (discoveryTrail.isEmpty()) "Back to browsing" else "Back") {
+                val parent = discoveryTrail.lastOrNull()
+                if (parent != null) {
+                    discoveryTrail.removeAt(discoveryTrail.lastIndex)
+                    discovery = parent
+                    openDiscovery(parent)
+                } else {
+                    discovery = null
+                    returnToBrowse()
+                }
+            })
+            heading(destination.title)
+            results?.addView(label(when (destination.id) {
+                "FEmusic_new_releases" -> "Fresh albums and songs, ready to explore."
+                "FEmusic_charts" -> "Popular songs, artists and playlists from YouTube Music."
+                "FEmusic_moods_and_genres" -> "Find a soundtrack for your day."
+                else -> "Explore songs, albums and playlists."
+            }, 14f, secondary = true))
+        }
+        request(clear = false) {
+            val page = metadata.discover(destination, next)
+            nextButton?.let { results?.removeView(it) }
+            nextButton = null
+            page.items.forEach { renderSection(it) }
+            if (page.items.isEmpty()) heading("Nothing here right now. Try another category.")
+            page.next?.let { token ->
+                nextButton = action("Discover more") { openDiscovery(destination, token) }
+                results?.addView(nextButton)
             }
         }
     }
@@ -307,6 +440,9 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     private fun search(next: String? = null) {
         if (query.isBlank()) return
+        displayedArtist = null
+        discovery = null
+        discoveryTrail.clear()
         openedPlaylist = null
         request(clear = next == null) {
             when (kind) {
@@ -366,6 +502,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private fun artistRow(artist: CloudArtist) = row(artist.name, "Artist", artist.artwork) { artistTracks(artist) }
 
     private fun artistTracks(artist: CloudArtist, next: String? = null) {
+        displayedArtist = artist
         openedPlaylist = null
         request(clear = next == null) {
             if (next == null) {
@@ -377,7 +514,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 }
                 heading("Songs")
             }
-            renderPage(metadata.artistTracks(artist.id, next), { artistTracks(artist, it) }, ::trackRow)
+            val page = metadata.artistTracks(artist.id, next)
+            withCollection(page.items) {
+                renderPage(page, { artistTracks(artist, it) }, ::trackRow)
+            }
         }
     }
 
@@ -400,12 +540,13 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun trackRow(item: CloudTrack) {
+        val collection = playbackCollection
         val status = when {
             !item.allowsPlayback -> " · ${getString(R.string.cloud_unavailable)}"
             else -> ""
         }
         row(item.title, item.artist + status, item.artwork) {
-            play(item)
+            play(item, collection)
         }.also { line ->
             line.addView(icon(R.drawable.ic_more, "More options for ${item.title}") { trackMenu(item) },
                 LinearLayout.LayoutParams(dp(44), dp(56)))
@@ -413,26 +554,26 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         }
     }
 
-    private fun play(item: CloudTrack) {
+    private fun play(item: CloudTrack, collection: List<CloudTrack>? = null) {
         if (!item.allowsPlayback) {
             toast("Track unavailable")
             return
         }
-        CloudLibrary.remember(item)
-        requireActivity().application.playerController().addAndPlay(item.toCloudMediaItem())
+        val tracks = collection?.filter { it.allowsPlayback }?.takeIf { it.any { track -> track.id == item.id } }
+            ?: listOf(item)
+        tracks.forEach(CloudLibrary::remember)
+        val media = tracks.map { it.toCloudMediaItem() }
+        val selected = media.first { it.mediaId == "3#${item.id}" }
+        val controller = requireActivity().application.playerController()
+        controller.setPlayMode(PlayMode.Sequential)
+        controller.replaceAll(media, selected)
         CRouter.with(requireActivity()).url(RoutePath.PLAYING).start()
     }
 
     private fun playAllButton(tracks: List<CloudTrack>) {
         if (tracks.isEmpty()) return
-        results?.addView(action("Play all", true) {
-                val playable = tracks.filter { it.allowsPlayback }
-                if (playable.isEmpty()) { toast("No playable tracks available"); return@action }
-                playable.forEach(CloudLibrary::remember)
-                val media = playable.map { it.toCloudMediaItem() }
-                requireActivity().application.playerController().replaceAll(media, media.first())
-                CRouter.with(requireActivity()).url(RoutePath.PLAYING).start()
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)).apply { bottomMargin = dp(12) })
+        results?.addView(action("Play all", true) { playCollection(tracks, false) },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)).apply { bottomMargin = dp(12) })
     }
 
     private fun trackMenu(item: CloudTrack) {
@@ -477,14 +618,17 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private fun library() {
         if (!libraryOnly || results == null) return
         loading?.cancel()
+        clearCollectionRows()
         results?.removeAllViews()
         if (openedPlaylist != null) {
             val playlist = CloudLibrary.playlists().find { it.id == openedPlaylist }
             if (playlist != null) {
-                heading(playlist.name)
                 val tracks = CloudLibrary.playlistTracks(playlist.id)
-                playAllButton(tracks); tracks.forEach(::trackRow)
                 results?.addView(action("Back to library") { openedPlaylist = null; library() })
+                collectionHero(playlist.name, "Your library", "Playlist", tracks.firstOrNull()?.artwork.orEmpty(),
+                    collectionSummary(tracks)) { localPlaylistMenu(playlist) }
+                collectionActions(playlist.name, tracks, local = true)
+                collectionTrackList(tracks)
                 return
             }
             openedPlaylist = null
@@ -492,7 +636,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         row("On this device", "Browse your local music", "") { CRouter.with(requireActivity()).url(RoutePath.LOCAL_SONG).start() }
         results?.addView(action("+ Create playlist") { editName("New playlist", "") { CloudLibrary.create(it) } })
         heading("Liked tracks")
-        val likes = CloudLibrary.likes(); playAllButton(likes); likes.forEach(::trackRow)
+        val likes = CloudLibrary.likes(); playAllButton(likes); withCollection(likes) { likes.forEach(::trackRow) }
         if (likes.isEmpty()) results?.addView(label("Tap a track’s menu to save your favorites here.", 14f, secondary = true))
         heading("Your playlists")
         CloudLibrary.playlists().forEach { playlist ->
@@ -513,71 +657,221 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     private fun playlistRail(playlists: List<CloudPlaylist>) {
         if (playlists.isEmpty()) return
-        val rail = LinearLayout(requireContext()).apply { setPadding(0, 0, dp(4), dp(8)) }
-        playlists.forEach { item ->
-            val card = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                background = ripple(color(R.color.card_bg), 16)
-                setPadding(dp(8), dp(8), dp(8), dp(12))
-                setOnClickListener { openPlaylist(item) }
-            }
-            card.addView(artwork(item.artwork, item.title, 144), LinearLayout.LayoutParams(dp(144), dp(144)))
-            card.addView(label(item.title, 15f, true).apply { maxLines = 2; setPadding(dp(4), dp(10), dp(4), 0) })
-            card.addView(label(listOf(if (item.isAlbum) "Album" else "Playlist", item.creator).filter(String::isNotBlank).joinToString(" · "), 12f, secondary = true).apply {
-                maxLines = 1; setPadding(dp(4), dp(4), dp(4), 0)
-            })
-            rail.addView(card, LinearLayout.LayoutParams(dp(160), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(12) })
-        }
-        results?.addView(HorizontalScrollView(requireContext()).apply {
+        val rail = RecyclerView(requireContext()).apply {
             isHorizontalScrollBarEnabled = false
-            addView(rail)
-        })
+            isVerticalScrollBarEnabled = false
+            isNestedScrollingEnabled = false
+            clipToPadding = false
+            setPadding(0, 0, dp(4), dp(8))
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun getItemCount(): Int = playlists.size
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                    val card = LinearLayout(parent.context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        background = ripple(color(R.color.card_bg), 16)
+                        setPadding(dp(8), dp(8), dp(8), dp(12))
+                        layoutParams = RecyclerView.LayoutParams(dp(160), RecyclerView.LayoutParams.MATCH_PARENT).apply {
+                            marginEnd = dp(12)
+                        }
+                    }
+                    card.addView(artwork("", "Album or playlist", 144), LinearLayout.LayoutParams(dp(144), dp(144)))
+                    card.addView(label("", 15f, true).apply {
+                        maxLines = 2; setPadding(dp(4), dp(8), dp(4), 0)
+                    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)))
+                    card.addView(label("", 12f, secondary = true).apply {
+                        maxLines = 1; setPadding(dp(4), 0, dp(4), 0)
+                    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(20)))
+                    return object : RecyclerView.ViewHolder(card) {}
+                }
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                    val item = playlists[position]
+                    val card = holder.itemView as LinearLayout
+                    val cover = card.getChildAt(0) as ImageView
+                    cover.contentDescription = item.title
+                    cover.loadCover(if (item.artwork.isBlank()) R.drawable.ic_playlist else item.artwork, dp(12))
+                    (card.getChildAt(1) as TextView).text = item.title
+                    (card.getChildAt(2) as TextView).text = listOf(if (item.isAlbum) "Album" else "Playlist", item.creator)
+                        .filter(String::isNotBlank).joinToString(" · ")
+                    card.setOnClickListener { openPlaylist(item) }
+                }
+            }
+        }
+        results?.addView(rail, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(242)))
     }
 
     private fun openPlaylist(item: CloudPlaylist) {
+        val artistParent = displayedArtist
         openedPlaylist = null
+        clearCollectionRows()
         results?.removeAllViews()
-        results?.addView(action("Back to browsing") { returnToBrowse() })
+        results?.addView(action(if (artistParent != null) "Back to ${artistParent.name}" else "Back to browsing") {
+            if (artistParent != null) artistTracks(artistParent) else returnToBrowse()
+        })
+        val summary = collectionHero(item.title, item.creator, if (item.isAlbum) "Album" else "Playlist", item.artwork,
+            if (item.trackCount > 0) "${item.trackCount} songs · Loading duration…" else "Loading songs…") {
+            AlertDialog.Builder(requireContext()).setTitle(item.title).setItems(arrayOf("Open in YouTube Music")) { _, _ ->
+                openSource(item.url)
+            }.show()
+        }
+        val tracksSlot = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
+        results?.addView(tracksSlot)
+        request(clear = false) {
+            val tracks = metadata.playlistTracks(item)
+            summary.text = collectionSummary(tracks)
+            inSection(tracksSlot) {
+                clearCollectionRows()
+                tracksSlot.removeAllViews()
+                collectionActions(item.title, tracks, local = false)
+                collectionTrackList(tracks)
+            }
+        }
+    }
+
+    private fun collectionHero(title: String, creator: String, type: String, cover: String,
+                               summary: String, menu: () -> Unit): TextView {
         val hero = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(24), dp(24), dp(24), dp(24))
-            background = surface(color(R.color.card_bg), 22)
-            addView(artwork(item.artwork, item.title, 208), LinearLayout.LayoutParams(dp(208), dp(208)))
-            addView(label(item.title, 25f, true).apply {
-                gravity = Gravity.CENTER; setPadding(0, dp(20), 0, dp(8))
-            })
-            addView(label(item.creator, 15f, secondary = true).apply { gravity = Gravity.CENTER })
-            addView(label(if (item.isAlbum) "Album" else "Playlist", 12f, secondary = true).apply {
-                gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0)
-            })
+            setPadding(dp(18), dp(22), dp(18), dp(22))
+            background = surface(color(R.color.card_bg), 24)
         }
+        val available = (content?.width?.takeIf { it > 0 } ?: dp(resources.configuration.screenWidthDp)) - dp(76)
+        val size = minOf(dp(224), available).coerceAtLeast(dp(80))
+        hero.addView(artwork(cover, title, 0), LinearLayout.LayoutParams(size, size))
+        hero.addView(label(type.uppercase(), 11f, true, secondary = true).apply {
+            letterSpacing = 0.12f; gravity = Gravity.CENTER; setPadding(0, dp(20), 0, dp(8))
+        })
+        hero.addView(label(title, 27f, true).apply {
+            gravity = Gravity.CENTER; maxLines = 3
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        hero.addView(label(creator, 14f, secondary = true).apply {
+            gravity = Gravity.CENTER; maxLines = 2; setPadding(0, dp(10), 0, 0)
+        })
+        val details = label(summary, 12f, secondary = true).apply {
+            gravity = Gravity.CENTER; setPadding(0, dp(10), 0, 0)
+        }
+        hero.addView(details)
+        hero.addView(icon(R.drawable.ic_more, "Options for $title", menu), LinearLayout.LayoutParams(dp(44), dp(40)).apply {
+            topMargin = dp(8)
+        })
         results?.addView(hero, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) })
-        val tracksSlot = sectionSlot("Songs")
-        request(clear = false) {
-            val tracks = metadata.playlistTracks(item)
-            inSection(tracksSlot) {
-                tracksSlot.removeAllViews()
-                val total = tracks.sumOf { it.durationMs } / 60000
-                results?.addView(label("${tracks.size} songs · $total min", 13f, secondary = true).apply {
-                    setPadding(0, dp(18), 0, dp(14))
-                })
-                if (tracks.isEmpty()) heading("No songs available")
-                playAllButton(tracks)
-                if (tracks.isNotEmpty()) {
-                    val actions = LinearLayout(requireContext())
-                    actions.addView(action("Shuffle") { playCollection(tracks, true) },
-                        LinearLayout.LayoutParams(0, dp(46), 1f))
-                    actions.addView(action("Save to library") {
-                        CloudLibrary.saveCollection(item.title, tracks); toast("Saved to your library")
-                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginStart = dp(8) })
-                    results?.addView(actions, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18) })
-                }
-                tracks.forEach(::trackRow)
-            }
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14); bottomMargin = dp(18) })
+        return details
+    }
+
+    private fun collectionSummary(tracks: List<CloudTrack>): String {
+        val seconds = tracks.sumOf { it.durationMs.coerceAtLeast(0) } / 1000
+        val duration = when {
+            seconds >= 3600 -> "${seconds / 3600} hr ${(seconds % 3600) / 60} min"
+            seconds > 0 -> "${maxOf(1, seconds / 60)} min"
+            else -> ""
         }
+        return listOf("${tracks.size} ${if (tracks.size == 1) "song" else "songs"}", duration)
+            .filter(String::isNotBlank).joinToString(" · ")
+    }
+
+    private fun collectionActions(title: String, tracks: List<CloudTrack>, local: Boolean) {
+        if (tracks.isEmpty()) return
+        val line = LinearLayout(requireContext())
+        line.addView(action("▶  Play", true) { playCollection(tracks, false) }.apply { minimumHeight = dp(48) },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        line.addView(action("Shuffle") { playCollection(tracks, true) }.apply { minimumHeight = dp(48) },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(10) })
+        results?.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
+        val save = if (local) action("Add songs") {
+            val main = activity as? MainActivity
+            if (main != null) main.openSearch() else CRouter.with(requireActivity()).url(RoutePath.SEARCH).start()
+        } else action("+  Save to library") {
+            CloudLibrary.saveCollection(title, tracks)
+            toast("Saved to your library")
+        }
+        if (!local) save.setOnClickListener {
+            CloudLibrary.saveCollection(title, tracks)
+            save.text = "Saved to library"
+            save.isEnabled = false
+            toast("Saved to your library")
+        }
+        save.minimumHeight = dp(44)
+        results?.addView(save, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
+    }
+
+    private fun localPlaylistMenu(playlist: SavedPlaylist) {
+        AlertDialog.Builder(requireContext()).setTitle(playlist.name).setItems(arrayOf("Rename playlist", "Delete playlist")) { _, choice ->
+            if (choice == 0) editName("Rename playlist", playlist.name) { CloudLibrary.rename(playlist.id, it) }
+            else AlertDialog.Builder(requireContext()).setMessage("Delete ${playlist.name}?")
+                .setPositiveButton(R.string.delete) { _, _ -> CloudLibrary.delete(playlist.id) }
+                .setNegativeButton(android.R.string.cancel, null).show()
+        }.show()
+    }
+
+    private fun collectionTrackList(tracks: List<CloudTrack>) {
+        heading("Songs")
+        if (tracks.isEmpty()) {
+            results?.addView(label(if (openedPlaylist != null) "Your playlist is empty. Add songs from a track’s menu." else "No songs available right now.",
+                14f, secondary = true).apply { setPadding(0, 0, 0, dp(18)) })
+            if (openedPlaylist != null) results?.addView(action("Find songs") {
+                val main = activity as? MainActivity
+                if (main != null) main.openSearch() else CRouter.with(requireActivity()).url(RoutePath.SEARCH).start()
+            })
+            return
+        }
+        tracks.forEachIndexed { index, item -> collectionTrackRow(item, index + 1, tracks) }
+        observeCollectionPlayback()
+    }
+
+    private fun observeCollectionPlayback() {
+        if (PlayServiceModule.isPlayerReady.value != true) return
+        val controller = requireActivity().application.playerController()
+        collectionObserver?.cancel()
+        collectionObserver = viewLifecycleOwner.lifecycleScope.launch {
+            combine(controller.currentSong, controller.playState) { song, state -> song?.mediaId to state.isPlaying }
+                .collectLatest { (id, playing) ->
+                    collectionRows.forEach { row ->
+                        val active = id == "3#${row.item.id}"
+                        row.marker.text = if (active) if (playing) "▶" else "Ⅱ" else row.number.toString()
+                        row.marker.contentDescription = if (active) if (playing) "Now playing" else "Paused" else "Track ${row.number}"
+                        row.marker.setTextColor(color(if (active) R.color.common_theme_color else R.color.common_text_h2_color))
+                        row.title.setTextColor(color(if (active) R.color.common_theme_color else R.color.common_text_h1_color))
+                    }
+                }
+        }
+    }
+
+    private fun collectionTrackRow(item: CloudTrack, number: Int, tracks: List<CloudTrack>) {
+        val line = LinearLayout(requireContext()).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
+            minimumHeight = dp(68)
+            background = ripple(color(android.R.color.transparent), 12)
+            setOnClickListener { play(item, tracks) }
+            setOnLongClickListener { trackMenu(item); true }
+        }
+        val marker = label(number.toString(), 12f, secondary = true).apply { gravity = Gravity.CENTER }
+        line.addView(marker, LinearLayout.LayoutParams(dp(26), dp(44)))
+        line.addView(artwork(item.artwork, item.title, 44), LinearLayout.LayoutParams(dp(44), dp(44)))
+        val title = label(item.title, 14f, true).apply { maxLines = 2 }
+        line.addView(LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, dp(6), 0)
+            addView(title)
+            addView(label(item.artist + if (!item.allowsPlayback) " · Unavailable" else "", 12f, secondary = true).apply {
+                maxLines = 1; setPadding(0, dp(5), 0, 0)
+            })
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        val duration = if (item.durationMs > 0) "${item.durationMs / 60000}:${((item.durationMs / 1000) % 60).toString().padStart(2, '0')}" else ""
+        line.addView(label(duration, 11f, secondary = true).apply { gravity = Gravity.END or Gravity.CENTER_VERTICAL },
+            LinearLayout.LayoutParams(dp(42), dp(44)))
+        line.addView(icon(R.drawable.ic_more, "Options for ${item.title}") { trackMenu(item) }, LinearLayout.LayoutParams(dp(36), dp(44)))
+        results?.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        collectionRows.add(CollectionRow(item, number, marker, title))
+    }
+
+    private fun clearCollectionRows() {
+        collectionObserver?.cancel()
+        collectionObserver = null
+        collectionRows.clear()
     }
 
     private fun playCollection(tracks: List<CloudTrack>, shuffle: Boolean) {
@@ -586,12 +880,19 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         playable.forEach(CloudLibrary::remember)
         val media = playable.map { it.toCloudMediaItem() }
         val controller = requireActivity().application.playerController()
-        controller.setPlayMode(if (shuffle) PlayMode.Shuffle else PlayMode.Loop)
+        controller.setPlayMode(if (shuffle) PlayMode.Shuffle else PlayMode.Sequential)
         controller.replaceAll(media, if (shuffle) media.random() else media.first())
         CRouter.with(requireActivity()).url(RoutePath.PLAYING).start()
     }
 
+    private fun withCollection(tracks: List<CloudTrack>, render: () -> Unit) {
+        val previous = playbackCollection
+        playbackCollection = tracks
+        try { render() } finally { playbackCollection = previous }
+    }
+
     private fun returnToBrowse() {
+        discovery?.let { openDiscovery(it); return }
         if (libraryOnly) library() else if (searchOnly && query.isNotBlank()) search()
         else if (searchOnly) searchWelcome() else home()
     }
@@ -656,7 +957,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         results?.addView(label(value, 20f, true).apply { setPadding(0, dp(20), 0, dp(14)) })
     }
 
-    private fun color(resource: Int) = ContextCompat.getColor(requireContext(), resource)
+    private fun color(resource: Int) = requireContext().getCloudColor(resource)
     private fun surface(fill: Int, radius: Int) = GradientDrawable().apply {
         setColor(fill); cornerRadius = dp(radius).toFloat()
     }
@@ -666,7 +967,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     private fun request(clear: Boolean = true, work: suspend () -> Unit) {
         loading?.cancel()
-        if (clear) { results?.removeAllViews(); nextButton = null }
+        if (clear) { clearCollectionRows(); results?.removeAllViews(); nextButton = null }
         val target = results ?: return
         val indicator = LinearLayout(requireContext()).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -708,6 +1009,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
+        clearCollectionRows()
         debounce?.cancel()
         debounce = null
         searchInput = null
@@ -718,6 +1020,16 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         content = null
         results = null
         nextButton = null
+        discovery = null
+        discoveryTrail.clear()
+        displayedArtist = null
+        playbackCollection = null
         super.onDestroyView()
+    }
+
+    companion object {
+        private val NEW_RELEASES = CloudDestination("FEmusic_new_releases", "New releases")
+        private val CHARTS = CloudDestination("FEmusic_charts", "Charts")
+        private val MOODS = CloudDestination("FEmusic_moods_and_genres", "Moods & genres")
     }
 }

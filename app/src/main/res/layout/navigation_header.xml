@@ -69,13 +69,13 @@
         android:text="@string/cloud_drawer_collection"
         android:textSize="10sp"
         android:fontFamily="sans-serif-medium"
-        android:textColor="@color/common_text_h2_color" />
+        android:textColor="?attr/cloudTextSecondary" />
 
     <TextView
         android:id="@+id/tvLibrarySummary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:textColor="@color/common_text_h1_color"
+        android:textColor="?attr/cloudTextPrimary"
         android:textSize="14sp" />
 </LinearLayout>

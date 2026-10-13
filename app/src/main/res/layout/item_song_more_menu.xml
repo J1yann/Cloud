@@ -6,5 +6,5 @@
     android:paddingHorizontal="16dp"
     android:paddingVertical="12dp"
     android:singleLine="true"
-    android:textColor="@color/common_text_h1_color"
+    android:textColor="?attr/cloudTextPrimary"
     android:textSize="14dp" />

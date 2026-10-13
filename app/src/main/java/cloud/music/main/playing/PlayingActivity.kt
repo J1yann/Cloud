@@ -1,12 +1,7 @@
 package cloud.music.main.playing
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
@@ -27,18 +22,23 @@ import jp.wasabeef.blurry.Blurry
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import me.wcy.lrcview.LrcView
 import cloud.music.R
 import cloud.music.common.BaseMusicActivity
+import cloud.music.common.DarkModeService
+import cloud.music.storage.preference.ConfigPreferences
+import android.graphics.Color
 import cloud.music.consts.RoutePath
 import cloud.music.databinding.ActivityPlayingBinding
-import cloud.music.ext.registerReceiverCompat
 import cloud.music.main.playlist.CurrentPlaylistFragment
 import cloud.music.service.PlayMode
 import cloud.music.service.PlayState
 import cloud.music.service.PlayerController
 import cloud.music.catalog.CloudLibrary
 import cloud.music.lyrics.CloudLyrics
+import cloud.music.lyrics.LyricsTiming
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.net.Uri
 import kotlinx.coroutines.CancellationException
 import cloud.music.storage.LrcCache
 import cloud.music.utils.TimeUtils
@@ -59,20 +59,20 @@ import kotlin.math.abs
 @Route(RoutePath.PLAYING)
 @AndroidEntryPoint
 class PlayingActivity : BaseMusicActivity() {
+    override val popupWindow = true
     private val viewBinding by viewBindings<ActivityPlayingBinding>()
 
     @Inject
     lateinit var playerController: PlayerController
 
 
-    private val audioManager by lazy {
-        getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
+    private val isAmoled: Boolean
+        get() = ConfigPreferences.darkMode == DarkModeService.DarkMode.Amoled.value
 
     private val defaultCoverBitmap by lazy {
         BitmapFactory.decodeResource(resources, R.drawable.bg_playing_default_cover)
     }
-    private val defaultBgBitmap by lazy {
+    private val defaultBgBitmapDelegate = lazy {
         BitmapFactory.decodeResource(
             resources,
             R.drawable.bg_playing_default,
@@ -84,6 +84,8 @@ class PlayingActivity : BaseMusicActivity() {
             }
         )
     }
+
+    private val defaultBgBitmap by defaultBgBitmapDelegate
 
     private var loadLrcJob: Job? = null
     private var lyricsDurationMs = 0L
@@ -104,9 +106,14 @@ class PlayingActivity : BaseMusicActivity() {
         super.onCreate(savedInstanceState)
         setContentView(viewBinding.root)
 
+        if (isAmoled) {
+            viewBinding.flBackground.setBackgroundColor(Color.BLACK)
+            viewBinding.ivPlayingBg.isVisible = false
+            viewBinding.backgroundShade.isVisible = false
+            viewBinding.backgroundFade.isVisible = false
+        }
         initWindowInsets()
         initTitle()
-        initVolume()
         initCover()
         initLrc()
         initActions()
@@ -154,15 +161,6 @@ class PlayingActivity : BaseMusicActivity() {
         }
     }
 
-    private fun initVolume() {
-        viewBinding.volumeLayout.sbVolume.max =
-            audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        viewBinding.volumeLayout.sbVolume.progress =
-            audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val filter = IntentFilter(VOLUME_CHANGED_ACTION)
-        registerReceiverCompat(volumeReceiver, filter)
-    }
-
     private fun initCover() {
         viewBinding.albumCoverView.setOnClickListener {
             switchCoverLrc(false)
@@ -171,19 +169,12 @@ class PlayingActivity : BaseMusicActivity() {
     }
 
     private fun initLrc() {
-        viewBinding.lrcView.setDraggable(true) { view, time ->
-            val playState = playerController.playState.value
-            if (playState.isPlaying || playState.isPausing) {
-                playerController.seekTo(time.toInt())
-                if (playState.isPausing) {
-                    playerController.playPause()
-                }
-                return@setDraggable true
-            }
-            return@setDraggable false
-        }
-        viewBinding.lrcView.setOnTapListener { view: LrcView?, x: Float, y: Float ->
-            switchCoverLrc(true)
+        viewBinding.lrcView.positionProvider = { playerController.mediaController.currentPosition }
+        viewBinding.lrcView.onLineClick = { time ->
+            // Seeking a lyric line keeps a paused track paused.
+            playerController.seekTo(time.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            viewBinding.controlLayout.sbProgress.progress = time.toInt()
+            viewBinding.controlLayout.tvCurrentTime.text = TimeUtils.formatMs(time)
         }
     }
 
@@ -203,6 +194,7 @@ class PlayingActivity : BaseMusicActivity() {
         lifecycleScope.launch {
             playerController.playMode.collectLatest { playMode ->
                 viewBinding.controlLayout.ivMode.setImageLevel(playMode.value)
+                viewBinding.controlLayout.ivMode.contentDescription = getString(playMode.nameRes)
             }
         }
 
@@ -243,29 +235,10 @@ class PlayingActivity : BaseMusicActivity() {
                 if (playState.isPlaying || playState.isPausing) {
                     val progress = seekBar.progress
                     playerController.seekTo(progress)
-                    if (viewBinding.lrcView.hasLrc()) {
-                        viewBinding.lrcView.updateTime(progress.toLong())
-                    }
+                    viewBinding.lrcView.updatePosition(progress.toLong())
                 } else {
                     seekBar.progress = 0
                 }
-            }
-        })
-        viewBinding.volumeLayout.sbVolume.setOnSeekBarChangeListener(object :
-            OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar ?: return
-                audioManager.setStreamVolume(
-                    AudioManager.STREAM_MUSIC,
-                    seekBar.progress,
-                    AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE
-                )
             }
         })
     }
@@ -310,9 +283,7 @@ class PlayingActivity : BaseMusicActivity() {
                 if (isDraggingProgress.not()) {
                     viewBinding.controlLayout.sbProgress.progress = progress.toInt()
                 }
-                if (viewBinding.lrcView.hasLrc()) {
-                    viewBinding.lrcView.updateTime(progress)
-                }
+                viewBinding.lrcView.updatePosition(playerController.mediaController.currentPosition)
             }
         }
 
@@ -326,91 +297,128 @@ class PlayingActivity : BaseMusicActivity() {
 
     private fun updateCover(song: MediaItem) {
         setDefaultCover()
-        ImageUtils.loadBitmap(song.getLargeCover()) {
-            if (it.isSuccessWithData() && !isDestroyed && playerController.currentSong.value?.mediaId == song.mediaId) {
-                val bitmap = it.getDataOrThrow()
-                viewBinding.albumCoverView.setImageBitmap(bitmap)
-                Blurry.with(this).sampling(10).from(bitmap).into(viewBinding.ivPlayingBg)
+        val original = song.getLargeCover()
+        val host = runCatching { Uri.parse(original).host }.getOrNull().orEmpty()
+        val large = when {
+            host.endsWith("googleusercontent.com") || host.endsWith("ggpht.com") -> original
+                .replace(Regex("=w\\d+-h\\d+"), "=w1200-h1200")
+                .replace(Regex("=s\\d+"), "=s1200")
+            host.endsWith("ytimg.com") -> original.replace(
+                Regex("/(?:mqdefault|sddefault|hqdefault|hq720)\\.jpg"), "/maxresdefault.jpg"
+            )
+            else -> original
+        }
+        fun load(url: String, fallback: Boolean) {
+            ImageUtils.loadBitmap(url) { result ->
+                if (isDestroyed || isFinishing || playerController.currentSong.value?.mediaId != song.mediaId) return@loadBitmap
+                if (result.isSuccessWithData()) {
+                    val bitmap = result.getDataOrThrow()
+                    // Missing YouTube maxres artwork can return a tiny placeholder with HTTP 200.
+                    if (fallback && url != original && (bitmap.width < 320 || bitmap.height < 180)) {
+                        load(original, false)
+                        return@loadBitmap
+                    }
+                    viewBinding.albumCoverView.setImageBitmap(bitmap)
+                    if (!isAmoled) Blurry.with(this).sampling(8).radius(22).from(bitmap).into(viewBinding.ivPlayingBg)
+                } else if (fallback && url != original) load(original, false)
             }
         }
+        if (original.isNotBlank()) load(large, true)
     }
 
     private fun setDefaultCover() {
         viewBinding.albumCoverView.setImageBitmap(defaultCoverBitmap)
-        viewBinding.ivPlayingBg.setImageBitmap(defaultBgBitmap)
+        if (!isAmoled) viewBinding.ivPlayingBg.setImageBitmap(defaultBgBitmap)
     }
 
     private fun updateLrc(song: MediaItem) {
         loadLrcJob?.cancel()
         lyricsDurationMs = knownDuration(song)
-        viewBinding.lrcView.loadLrc("")
-        viewBinding.lrcView.isVisible = !viewBinding.albumCoverView.isVisible
-        viewBinding.plainLyrics.text = ""
-        viewBinding.plainLyricsScroll.isVisible = false
-        viewBinding.lyricsCredit.text = getString(R.string.player_lyrics_source)
-        val lrcPath = LrcCache.getLrcFilePath(song)
-        if (!lrcPath.isNullOrEmpty() && File(lrcPath).exists()) {
-            loadLrc(lrcPath)
-            viewBinding.lyricsCredit.text = getString(R.string.player_local_lyrics)
-            return
-        }
+        val duration = lyricsDurationMs
         setLrcLabel(getString(R.string.player_lyrics_loading))
+        viewBinding.lyricsCredit.text = ""
         loadLrcJob = lifecycleScope.launch {
             try {
+                val lrcPath = LrcCache.getLrcFilePath(song)
+                if (!lrcPath.isNullOrEmpty() && File(lrcPath).exists()) {
+                    val lines = withContext(Dispatchers.IO) {
+                        val file = File(lrcPath)
+                        if (file.length() <= 1_000_000) LyricsTiming.lrc(file.readText()) else emptyList()
+                    }
+                    if (playerController.currentSong.value?.mediaId != song.mediaId) return@launch
+                    if (lines.isNotEmpty()) {
+                        viewBinding.lrcView.showLines(lines)
+                        viewBinding.lyricsCredit.text = getString(R.string.player_local_lyrics)
+                        return@launch
+                    }
+                }
                 val track = CloudLibrary.track(song.mediaId.substringAfter('#'))
+                var displayedFallback: CloudLyrics.Result? = null
                 val lyrics = CloudLyrics.get(
                     song.mediaMetadata.title?.toString().orEmpty(),
                     song.mediaMetadata.artist?.toString().orEmpty(),
                     track?.album ?: song.mediaMetadata.albumTitle?.toString().orEmpty(),
-                    lyricsDurationMs,
+                    duration,
+                    onFallback = { fallback ->
+                        withContext(Dispatchers.Main.immediate) {
+                            if (playerController.currentSong.value?.mediaId == song.mediaId) {
+                                renderLyrics(fallback)
+                                displayedFallback = fallback
+                            }
+                        }
+                    },
                 )
                 if (playerController.currentSong.value?.mediaId != song.mediaId) return@launch
-                when {
-                    lyrics.instrumental -> setLrcLabel(getString(R.string.player_instrumental))
-                    lyrics.synced.isNotBlank() -> {
-                        viewBinding.lrcView.loadLrc(lyrics.synced)
-                        viewBinding.lrcView.updateTime(playerController.playProgress.value)
-                    }
-                    lyrics.plain.isNotBlank() -> {
-                        viewBinding.plainLyrics.text = lyrics.plain
-                        viewBinding.plainLyricsScroll.isVisible = viewBinding.albumCoverView.isVisible.not()
-                        viewBinding.lrcView.isVisible = false
-                    }
-                    else -> setLrcLabel(getString(R.string.player_no_lyrics))
-                }
+                if (lyrics != displayedFallback) renderLyrics(lyrics)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 setLrcLabel(getString(R.string.player_lyrics_error))
+                viewBinding.lyricsCredit.text = ""
             }
         }
     }
 
-    private fun loadLrc(path: String) {
-        val file = File(path)
-        viewBinding.lrcView.loadLrc(file)
+    private fun renderLyrics(lyrics: CloudLyrics.Result) {
+        val timing = if (lyrics.lines.any { it.words.isNotEmpty() }) getString(R.string.player_word_synced)
+            else if (lyrics.lines.isNotEmpty()) getString(R.string.player_line_synced)
+            else getString(R.string.player_plain_lyrics)
+        viewBinding.lyricsCredit.text = getString(R.string.player_lyrics_credit, lyrics.source, timing)
+        when {
+            lyrics.instrumental -> setLrcLabel(getString(R.string.player_instrumental))
+            lyrics.lines.isNotEmpty() -> {
+                viewBinding.lrcView.showLines(lyrics.lines)
+                viewBinding.lrcView.updatePosition(playerController.mediaController.currentPosition)
+            }
+            lyrics.plain.isNotBlank() -> viewBinding.lrcView.showPlain(lyrics.plain)
+            else -> {
+                setLrcLabel(getString(R.string.player_no_lyrics))
+                viewBinding.lyricsCredit.text = ""
+            }
+        }
     }
 
     private fun setLrcLabel(label: String) {
-        viewBinding.lrcView.setLabel(label)
+        viewBinding.lrcView.showMessage(label)
     }
 
     private fun switchCoverLrc(showCover: Boolean) {
         viewBinding.albumCoverView.isVisible = showCover
         viewBinding.lrcLayout.isVisible = !showCover
-        val hasPlain = viewBinding.plainLyrics.text.isNotBlank()
-        viewBinding.plainLyricsScroll.isVisible = !showCover && hasPlain
-        viewBinding.lrcView.isVisible = !showCover && !hasPlain
+        viewBinding.lrcView.isVisible = !showCover
+        viewBinding.titleLayout.lyricsToggle.isSelected = !showCover
         viewBinding.titleLayout.lyricsToggle.text = getString(
             if (showCover) R.string.player_lyrics else R.string.player_artwork
         )
+        viewBinding.lrcView.setPlaying(playerController.playState.value == PlayState.Playing)
     }
 
     private fun switchPlayMode() {
         val mode = when (playerController.playMode.value) {
+            PlayMode.Sequential -> PlayMode.Loop
             PlayMode.Loop -> PlayMode.Shuffle
             PlayMode.Shuffle -> PlayMode.Single
-            PlayMode.Single -> PlayMode.Loop
+            PlayMode.Single -> PlayMode.Sequential
         }
         toast(mode.nameRes)
         playerController.setPlayMode(mode)
@@ -437,6 +445,10 @@ class PlayingActivity : BaseMusicActivity() {
 
     private fun updatePlayState(playState: PlayState) {
         updateDuration()
+        viewBinding.lrcView.setPlaying(playState == PlayState.Playing)
+        viewBinding.controlLayout.flPlay.contentDescription = getString(
+            if (playState == PlayState.Playing) R.string.player_pause else R.string.player_play
+        )
         when (playState) {
             PlayState.Preparing -> {
                 viewBinding.controlLayout.flPlay.isEnabled = false
@@ -472,20 +484,8 @@ class PlayingActivity : BaseMusicActivity() {
         loadLrcJob?.cancel()
         playerController.mediaController.removeListener(durationListener)
         super.onDestroy()
-        unregisterReceiver(volumeReceiver)
         defaultCoverBitmap.recycle()
-        defaultBgBitmap.recycle()
+        if (defaultBgBitmapDelegate.isInitialized()) defaultBgBitmap.recycle()
     }
 
-    private val volumeReceiver: BroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            viewBinding.volumeLayout.sbVolume.progress =
-                audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        }
-    }
-
-    companion object {
-        private const val TAG = "PlayingActivity"
-        private const val VOLUME_CHANGED_ACTION = "android.media.VOLUME_CHANGED_ACTION"
-    }
 }

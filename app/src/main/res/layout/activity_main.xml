@@ -24,13 +24,13 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="@dimen/common_divider_size"
-            android:background="@color/common_divider" />
+            android:background="?attr/cloudDividerColor" />
 
         <LinearLayout
             android:id="@+id/tabBar"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:background="@color/tab_bg"
+            android:background="?attr/cloudNavColor"
             android:orientation="horizontal" />
     </LinearLayout>
 
@@ -39,7 +39,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:orientation="vertical"
-        android:background="@color/card_bg">
+        android:background="?attr/cloudSurfaceColor">
 
         <com.google.android.material.navigation.NavigationView
             android:id="@+id/navigationView"
@@ -51,8 +51,8 @@
             app:itemHorizontalPadding="24dp"
             app:itemVerticalPadding="12dp"
             app:itemIconPadding="16dp"
-            app:itemIconTint="@color/common_text_h2_color"
-            app:itemTextColor="@color/common_text_h1_color"
+            app:itemIconTint="?attr/cloudTextSecondary"
+            app:itemTextColor="?attr/cloudTextPrimary"
             app:itemTextAppearance="@style/CloudDrawerItemText"
             app:menu="@menu/navigation_menu" />
 
@@ -60,7 +60,7 @@
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginHorizontal="24dp"
-            android:background="@color/common_divider" />
+            android:background="?attr/cloudDividerColor" />
 
         <TextView
             android:id="@+id/tvDrawerVersion"
@@ -69,6 +69,6 @@
             android:paddingHorizontal="24dp"
             android:paddingVertical="20dp"
             android:textSize="12sp"
-            android:textColor="@color/common_text_h2_color" />
+            android:textColor="?attr/cloudTextSecondary" />
     </LinearLayout>
 </androidx.drawerlayout.widget.DrawerLayout>

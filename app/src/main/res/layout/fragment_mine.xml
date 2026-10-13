@@ -13,7 +13,7 @@
         app:tlTitleText="" />
 
     <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
+ android:scrollbars="none"        android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <LinearLayout
@@ -44,8 +44,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:hint="Your library"
-                        android:textColor="@color/common_text_h1_color"
-                        android:textColorHint="@color/common_text_h1_color"
+                        android:textColor="?attr/cloudTextPrimary"
+                        android:textColorHint="?attr/cloudTextPrimary"
                         android:textSize="18dp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -76,7 +76,7 @@
                     android:drawablePadding="8dp"
                     android:gravity="center_vertical"
                     android:text="Local music"
-                    android:textColor="@color/common_text_h1_color"
+                    android:textColor="?attr/cloudTextPrimary"
                     android:textSize="16dp"
                     app:drawableStartCompat="@drawable/ic_local_music"
                     app:drawableTint="@color/common_theme_color" />
@@ -85,7 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:src="@drawable/ic_arrow_right"
-                    app:tint="@color/common_text_h2_color" />
+                    app:tint="?attr/cloudTextSecondary" />
             </LinearLayout>
 
             <LinearLayout
@@ -98,7 +98,7 @@
                 android:orientation="horizontal">
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvLikePlaylist"
+ android:scrollbars="none"                    android:id="@+id/rvLikePlaylist"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="16dp"
@@ -124,11 +124,11 @@
                     android:layout_marginTop="16dp"
                     android:paddingHorizontal="16dp"
                     android:text="Your playlists"
-                    android:textColor="@color/common_text_h2_color"
+                    android:textColor="?attr/cloudTextSecondary"
                     android:textSize="12dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvMyPlaylist"
+ android:scrollbars="none"                    android:id="@+id/rvMyPlaylist"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="12dp"
@@ -154,11 +154,11 @@
                     android:layout_marginTop="16dp"
                     android:paddingHorizontal="16dp"
                     android:text="Saved playlists"
-                    android:textColor="@color/common_text_h2_color"
+                    android:textColor="?attr/cloudTextSecondary"
                     android:textSize="12dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvCollectPlaylist"
+ android:scrollbars="none"                    android:id="@+id/rvCollectPlaylist"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="12dp"

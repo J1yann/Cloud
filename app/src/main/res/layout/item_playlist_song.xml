@@ -16,7 +16,7 @@
         android:minWidth="48dp"
         android:paddingHorizontal="8dp"
         android:singleLine="true"
-        android:textColor="@color/common_text_h2_color"
+        android:textColor="?attr/cloudTextSecondary"
         android:textSize="16dp"
         tools:text="9" />
 
@@ -33,7 +33,7 @@
             android:ellipsize="end"
             android:singleLine="true"
             android:text="Track"
-            android:textColor="@color/common_text_h1_color"
+            android:textColor="?attr/cloudTextPrimary"
             android:textSize="16dp" />
 
         <TextView
@@ -55,5 +55,5 @@
         android:contentDescription="@null"
         android:scaleType="centerInside"
         android:src="@drawable/ic_more"
-        app:tint="@color/common_text_h2_color" />
+        app:tint="?attr/cloudTextSecondary" />
 </LinearLayout>

@@ -4,4 +4,16 @@
         <attr name="maxWidth" format="dimension" />
         <attr name="maxHeight" format="dimension" />
     </declare-styleable>
+    <attr name="cloudBackgroundColor" format="color" />
+    <attr name="cloudSurfaceColor" format="color" />
+    <attr name="cloudDialogColor" format="color" />
+    <attr name="cloudNavColor" format="color" />
+    <attr name="cloudPlayerBarColor" format="color" />
+    <attr name="cloudDividerColor" format="color" />
+    <attr name="cloudTextPrimary" format="color" />
+    <attr name="cloudTextSecondary" format="color" />
+    <attr name="cloudAccentColor" format="color" />
+    <attr name="cloudAccentSoft" format="color" />
+    <attr name="cloudHeroStart" format="color" />
+    <attr name="cloudHeroEnd" format="color" />
 </resources>

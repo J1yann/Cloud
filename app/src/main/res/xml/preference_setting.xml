@@ -16,6 +16,19 @@
             android:title="Appearance" />
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="PLAYBACK" android:layout="@layout/settings_preference_category">
+        <ListPreference
+            android:layout="@layout/settings_preference_row"
+            android:defaultValue="1"
+            android:icon="@drawable/ic_next"
+            android:dialogTitle="Auto-next"
+            android:entries="@array/autoplay_entries"
+            android:entryValues="@array/autoplay_values"
+            android:key="auto_next"
+            android:summary="Keep listening with related songs"
+            android:title="Auto-next" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="SOUND" android:layout="@layout/settings_preference_category">
 
         <Preference

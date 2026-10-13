@@ -9,4 +9,5 @@
     <item
         android:drawable="@drawable/ic_play_mode_single"
         android:maxLevel="2" />
+    <item android:drawable="@drawable/ic_play_mode_sequential" android:maxLevel="3" />
 </level-list>

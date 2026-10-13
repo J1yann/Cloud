@@ -17,11 +17,11 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="0dp"
         android:singleLine="true"
-        android:textColor="@color/common_text_h1_color"
-        android:textColorHint="@color/common_text_h2_color"
+        android:textColor="?attr/cloudTextPrimary"
+        android:textColorHint="?attr/cloudTextSecondary"
         android:textSize="14dp"
         app:shape_radius="4dp"
-        app:shape_strokeColor="@color/common_divider"
+        app:shape_strokeColor="?attr/cloudDividerColor"
         app:shape_strokeSize="1dp" />
 
     <TextView
@@ -31,5 +31,5 @@
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
         android:text="View Cloud documentation"
-        android:textColor="@color/common_text_h2_color" />
+        android:textColor="?attr/cloudTextSecondary" />
 </LinearLayout>

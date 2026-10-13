@@ -23,17 +23,36 @@ internal class YouTubeMusicParser {
     )
 
     fun sections(data: JsonObject): CloudPage<CloudSection> {
-        val shelves = renderers(data, setOf("musicCarouselShelfRenderer", "musicShelfRenderer", "musicShelfContinuation"))
+        val shelves = renderers(data, setOf("musicCarouselShelfRenderer", "musicShelfRenderer", "musicShelfContinuation", "musicPlaylistShelfRenderer", "musicPlaylistShelfContinuation", "gridRenderer"))
         val sections = shelves.mapNotNull { shelf ->
             val rows = items(shelf)
             val tracks = rows.mapNotNull(::track)
             val playlists = rows.mapNotNull(::playlist)
             val artists = rows.mapNotNull(::artist)
-            if (tracks.isEmpty() && playlists.isEmpty() && artists.isEmpty()) return@mapNotNull null
+            val destinations = renderers(shelf, setOf("musicNavigationButtonRenderer")).mapNotNull navigation@ { button ->
+                val browse = button.objectValue("clickCommand")?.objectValue("browseEndpoint") ?: return@navigation null
+                val id = browse.string("browseId")
+                if (id.isBlank()) return@navigation null
+                CloudDestination(id, text(button.get("buttonText")), browse.string("params"),
+                    button.objectValue("solid")?.get("leftStripeColor")?.asLong?.toInt() ?: 0)
+            }
+            if (tracks.isEmpty() && playlists.isEmpty() && artists.isEmpty() && destinations.isEmpty()) return@mapNotNull null
+            val title = text(shelf.get("title")).ifBlank { firstText(shelf.get("header"), "title").ifBlank { "Discover" } }
+            val more = shelf.objectValue("bottomEndpoint")?.objectValue("browseEndpoint")
+                ?: firstObject(shelf.get("header"), "moreContentButton")?.let { firstObject(it, "browseEndpoint") }
             CloudSection(
-                text(shelf.get("title")).ifBlank { firstText(shelf.get("header"), "title").ifBlank { "Discover" } },
+                title,
                 CloudPage(playlists, null), CloudPage(tracks, null), CloudPage(artists, null),
+                destinations, more?.let { CloudDestination(it.string("browseId"), title, it.string("params")) },
             )
+        }
+        if (sections.isEmpty()) {
+            // Some artist/playlist destinations return bare continuation items rather than shelves.
+            val tracks = tracks(data)
+            val playlists = playlists(data)
+            if (tracks.items.isNotEmpty() || playlists.items.isNotEmpty()) {
+                return CloudPage(listOf(CloudSection("Discover", playlists = playlists, tracks = tracks)), continuation(data))
+            }
         }
         if (sections.isEmpty() && shelves.isEmpty()) {
             throw IOException("YouTube Music's home layout changed. Try again later.")
@@ -172,7 +191,17 @@ internal class YouTubeMusicParser {
         val base = data.get("thumbnail") ?: data.get("thumbnailRenderer") ?: return ""
         return thumbnailArrays(base).flatMap { it }.mapNotNull { it.asObject() }
             .maxByOrNull { it.get("width")?.takeIf { width -> width.isJsonPrimitive }?.asInt ?: 0 }
-            ?.string("url").orEmpty()
+            ?.string("url").orEmpty().let(::largeArtwork)
+    }
+
+    private fun largeArtwork(url: String): String {
+        if (!(url.contains("googleusercontent.com/") || url.contains("ggpht.com/"))) return url
+        // Keep signed/encoded image paths and crop/quality flags intact; only increase size directives.
+        return url.replace(Regex("([=-])w(\\d+)")) { match ->
+            "${match.groupValues[1]}w${maxOf(720, match.groupValues[2].toInt())}"
+        }.replace(Regex("([=-])h(\\d+)")) { match ->
+            "${match.groupValues[1]}h${maxOf(720, match.groupValues[2].toInt())}"
+        }.replace(Regex("=s(\\d+)")) { match -> "=s${maxOf(720, match.groupValues[1].toInt())}" }
     }
 
     private fun thumbnailArrays(data: JsonElement?): List<List<JsonElement>> {

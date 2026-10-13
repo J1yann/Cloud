@@ -88,6 +88,8 @@ class CurrentPlaylistFragment : BottomSheetDialogFragment() {
                     }
                 })
         )
+        viewBinding.recyclerView.isVerticalScrollBarEnabled = false
+        viewBinding.recyclerView.isHorizontalScrollBarEnabled = false
         viewBinding.recyclerView.layoutManager = layoutManager
         viewBinding.recyclerView.adapter = adapter
     }
@@ -139,9 +141,10 @@ class CurrentPlaylistFragment : BottomSheetDialogFragment() {
 
     private fun switchPlayMode() {
         val mode = when (playerController.playMode.value) {
+            PlayMode.Sequential -> PlayMode.Loop
             PlayMode.Loop -> PlayMode.Shuffle
             PlayMode.Shuffle -> PlayMode.Single
-            PlayMode.Single -> PlayMode.Loop
+            PlayMode.Single -> PlayMode.Sequential
         }
         playerController.setPlayMode(mode)
     }

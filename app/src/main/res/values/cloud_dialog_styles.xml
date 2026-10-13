@@ -1,0 +1,11 @@
+<resources>
+    <style name="CloudDialogTheme" parent="ThemeOverlay.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_cloud_dialog</item>
+        <item name="android:windowAnimationStyle">@style/CloudDialogAnimation</item>
+        <item name="android:scrollbars">none</item>
+    </style>
+    <style name="CloudDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/cloud_dialog_fade_in</item>
+        <item name="android:windowExitAnimation">@anim/cloud_dialog_fade_out</item>
+    </style>
+</resources>

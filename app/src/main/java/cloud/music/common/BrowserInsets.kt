@@ -3,13 +3,13 @@ package cloud.music.common
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import cloud.music.R
-import top.wangchenyan.common.ext.getColorEx
+
 import top.wangchenyan.common.ui.activity.BaseActivity
 
 /** The activity owns browser insets so child screens never add them twice. */
 fun BaseActivity.configureBrowserInsets() {
-    val background = getColorEx(R.color.common_background_color)
-    val navigationBackground = getColorEx(R.color.tab_bg)
+    val background = getCloudColor(R.color.common_background_color)
+    val navigationBackground = getCloudColor(R.color.tab_bg)
     configWindowInsets {
         fillStatusBar = true
         fillNavBar = true

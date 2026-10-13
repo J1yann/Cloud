@@ -10,10 +10,12 @@ import android.widget.Toast
 import com.blankj.utilcode.util.AppUtils
 import cloud.music.R
 import cloud.music.common.configureBrowserInsets
+import cloud.music.common.applyCloudTheme
 import top.wangchenyan.common.ui.activity.BaseActivity
 
 class AboutActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyCloudTheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_about)
         configureBrowserInsets()

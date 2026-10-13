@@ -43,4 +43,14 @@ data class CloudSection(
     val playlists: CloudPage<CloudPlaylist> = CloudPage(emptyList(), null),
     val tracks: CloudPage<CloudTrack> = CloudPage(emptyList(), null),
     val artists: CloudPage<CloudArtist> = CloudPage(emptyList(), null),
+    val destinations: List<CloudDestination> = emptyList(),
+    val destination: CloudDestination? = null,
+)
+
+/** Opaque catalogue browse IDs and parameters; never a playback URL. */
+data class CloudDestination(
+    val id: String,
+    val title: String,
+    val params: String = "",
+    val color: Int = 0,
 )

@@ -40,7 +40,13 @@ object ConfigPreferences :
         DarkModeService.DarkMode.Auto.value
     )
 
-    var playMode: Int by IPreferencesFile.IntProperty("play_mode", 0)
+    var playMode: Int by IPreferencesFile.IntProperty("play_mode", 3)
+
+    private var autoplayValue by IPreferencesFile.StringProperty("auto_next", "1")
+
+    var autoplay: Boolean
+        get() = autoplayValue == "1"
+        set(value) { autoplayValue = if (value) "1" else "0" }
 
     var currentSongId: String by IPreferencesFile.StringProperty("current_song_id", "")
 

@@ -3,6 +3,25 @@
     <style name="AppBaseTheme" parent="Theme.AppCompat.DayNight.NoActionBar" />
 
     <style name="AppTheme" parent="AppBaseTheme">
+        <item name="cloudBackgroundColor">@color/common_background_color</item>
+        <item name="cloudSurfaceColor">@color/card_bg</item>
+        <item name="cloudDialogColor">@color/common_dialog_background_color</item>
+        <item name="cloudNavColor">@color/tab_bg</item>
+        <item name="cloudPlayerBarColor">@color/play_bar_bg</item>
+        <item name="cloudDividerColor">@color/common_divider</item>
+        <item name="cloudTextPrimary">@color/common_text_h1_color</item>
+        <item name="cloudTextSecondary">@color/common_text_h2_color</item>
+        <item name="cloudAccentColor">@color/cloud_accent</item>
+        <item name="cloudAccentSoft">@color/cloud_accent_soft</item>
+        <item name="cloudHeroStart">@color/cloud_hero_start</item>
+        <item name="cloudHeroEnd">@color/cloud_hero_end</item>
+        <item name="android:windowBackground">?attr/cloudBackgroundColor</item>
+        <item name="android:colorBackground">?attr/cloudBackgroundColor</item>
+        <item name="android:textColorPrimary">?attr/cloudTextPrimary</item>
+        <item name="android:textColorSecondary">?attr/cloudTextSecondary</item>
+        <item name="colorControlNormal">?attr/cloudTextSecondary</item>
+        <item name="alertDialogTheme">@style/CloudDialogTheme</item>
+        <item name="android:scrollbars">none</item>
         <item name="colorPrimary">@color/common_theme_color</item>
         <item name="colorPrimaryDark">@color/common_theme_color</item>
         <item name="colorAccent">@color/common_theme_color</item>
@@ -30,6 +49,9 @@
     </style>
 
     <style name="BottomSheetDialogTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">
+        <item name="android:scrollbars">none</item>
+        <item name="colorSurface">?attr/cloudSurfaceColor</item>
+        <item name="colorOnSurface">?attr/cloudTextPrimary</item>
         <item name="bottomSheetStyle">@style/BottomSheetStyleTransparent</item>
     </style>
 

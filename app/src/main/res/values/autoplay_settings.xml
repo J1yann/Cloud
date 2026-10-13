@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="autoplay_entries">
+        <item>On — continue with related songs</item>
+        <item>Off — finish the chosen queue</item>
+    </string-array>
+    <string-array name="autoplay_values">
+        <item>1</item>
+        <item>0</item>
+    </string-array>
+</resources>

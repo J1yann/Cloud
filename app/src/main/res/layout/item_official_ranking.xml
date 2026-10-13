@@ -10,8 +10,8 @@
     android:paddingStart="18dp"
     android:paddingEnd="16dp"
     app:shape_radius="16dp"
-    app:shape_solidColor="@color/card_bg"
-    app:shape_strokeColor="@color/common_divider"
+    app:shape_solidColor="?attr/cloudSurfaceColor"
+    app:shape_strokeColor="?attr/cloudDividerColor"
     app:shape_strokeSize="@dimen/common_divider_size">
 
     <LinearLayout
@@ -26,7 +26,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:singleLine="true"
-            android:textColor="@color/common_text_h1_color"
+            android:textColor="?attr/cloudTextPrimary"
             android:textSize="20dp"
             android:textStyle="bold"
             tools:text="Trending" />
@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:singleLine="true"
-            android:textColor="@color/common_text_h2_color"
+            android:textColor="?attr/cloudTextSecondary"
             android:textSize="12dp"
             tools:text="Just updated" />
     </LinearLayout>

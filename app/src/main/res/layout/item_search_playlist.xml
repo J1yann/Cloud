@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
-            android:textColor="@color/common_text_h1_color"
+            android:textColor="?attr/cloudTextPrimary"
             android:textSize="16dp"
             tools:text="Playlist" />
 

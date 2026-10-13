@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:singleLine="true"
-                android:textColor="@color/common_text_h1_color"
+                android:textColor="?attr/cloudTextPrimary"
                 android:textSize="16dp"
                 tools:text="Track" />
 
@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:singleLine="true"
-                android:textColor="@color/common_text_h2_color"
+                android:textColor="?attr/cloudTextSecondary"
                 android:textSize="12sp"
                 tools:text="Artist" />
         </LinearLayout>
@@ -53,7 +53,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="@dimen/common_divider_size"
-        android:background="@color/common_divider" />
+        android:background="?attr/cloudDividerColor" />
 
     <LinearLayout
         android:id="@+id/menuContainer"

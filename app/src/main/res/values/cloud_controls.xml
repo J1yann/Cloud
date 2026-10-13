@@ -1,4 +1,6 @@
 <resources>
+    <color name="cloud_hero_start">#173B65</color>
+    <color name="cloud_hero_end">#346E8B</color>
     <color name="cloud_accent">#173B65</color>
     <color name="cloud_accent_soft">#E8F1F6</color>
     <string name="cloud_timer_title">Sleep timer</string>

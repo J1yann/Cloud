@@ -11,7 +11,8 @@ import cloud.music.R
 import cloud.music.databinding.DialogCloudTimerBinding
 
 internal fun AlertDialog.applyCloudStyle(context: Context) {
-    window?.setBackgroundDrawable(ContextCompat.getDrawable(context, R.drawable.bg_cloud_dialog))
+    // Window background and animation come from CloudDialogTheme before first layout.
+    // Replacing the background after show changes its padding and recenters the dialog.
     val accent = ContextCompat.getColor(context, R.color.cloud_accent)
     getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(accent)
     getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(accent)
