@@ -52,25 +52,22 @@ class MainActivity : BaseMusicActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        PlayServiceModule.isPlayerReady.observe(this) { isReady ->
-            if (isReady) {
-                setContentView(viewBinding.root)
-
-                CustomTabPager(lifecycle, supportFragmentManager, viewBinding.viewPager).apply {
-                    NaviTab.ALL.onEach {
-                        val tabItem = getTabItem(it.icon, it.name)
-                        addFragment(it.newFragment(), tabItem.root)
-                    }
-                    setScrollable(false)
-                    setup()
-                }
-
-                initDrawer()
-                parseIntent()
-            }
-        }
-
+        // Browsing and settings must remain available even if playback cannot connect.
+        setContentView(viewBinding.root)
         configureBrowserInsets()
+        CustomTabPager(lifecycle, supportFragmentManager, viewBinding.viewPager).apply {
+            NaviTab.ALL.onEach {
+                val tabItem = getTabItem(it.icon, it.name)
+                addFragment(it.newFragment(), tabItem.root)
+            }
+            setScrollable(false)
+            setup()
+        }
+        initDrawer()
+        parseIntent()
+        PlayServiceModule.isPlayerReady.observe(this) { isReady ->
+            if (isReady) parseIntent()
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -115,6 +112,8 @@ class MainActivity : BaseMusicActivity() {
     private fun parseIntent() {
         val intent = intent
         if (intent.hasExtra(MusicService.EXTRA_NOTIFICATION)) {
+            // Keep the notification intent pending until a controller is ready.
+            if (PlayServiceModule.isPlayerReady.value != true) return
             if (application.playerController().currentSong.value != null) {
                 CRouter.with(this).url(RoutePath.PLAYING).start()
             }
@@ -188,7 +187,7 @@ class MainActivity : BaseMusicActivity() {
 
 
     private fun exitApp() {
-        application.playerController().stop()
+        if (PlayServiceModule.isPlayerReady.value == true) application.playerController().stop()
         finish()
     }
 

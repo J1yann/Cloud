@@ -12,5 +12,11 @@ class MusicFragmentContainerActivity : FragmentContainerActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applyCloudTheme()
         super.onCreate(savedInstanceState)
+        applyCloudPalette()
     }
+    override fun onResume() {
+        super.onResume()
+        refreshCloudThemeIfNeeded()
+    }
+
 }

@@ -3,6 +3,7 @@
     <style name="AppBaseTheme" parent="Theme.AppCompat.DayNight.NoActionBar" />
 
     <style name="AppTheme" parent="AppBaseTheme">
+        <item name="cloudAmoledActive">false</item>
         <item name="cloudBackgroundColor">@color/common_background_color</item>
         <item name="cloudSurfaceColor">@color/card_bg</item>
         <item name="cloudDialogColor">@color/common_dialog_background_color</item>

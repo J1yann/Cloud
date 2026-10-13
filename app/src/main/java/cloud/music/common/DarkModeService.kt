@@ -5,8 +5,6 @@ import android.content.res.Resources
 import androidx.appcompat.app.AppCompatDelegate
 import com.blankj.utilcode.util.ActivityUtils
 import cloud.music.storage.preference.ConfigPreferences
-import cloud.music.R
-import top.wangchenyan.common.CommonApp
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,16 +29,14 @@ class DarkModeService @Inject constructor() {
             setDarkModeInternal(mode)
             // Dark and AMOLED share night resources; switch the overlay even without a uiMode change.
             if ((previous == DarkMode.Amoled || mode == DarkMode.Amoled) && currentNight == targetNight) {
-                ActivityUtils.getActivityList().toList().forEach { activity ->
-                    if (!activity.isFinishing && !activity.isDestroyed) activity.recreate()
-                }
+                // Post until the preference dialog has finished dismissing.
+                top?.refreshCloudThemeIfNeeded()
             }
         }
     }
 
     private fun setDarkModeInternal(mode: DarkMode) {
         AppCompatDelegate.setDefaultNightMode(mode.systemValue)
-        CommonApp.app.setTheme(if (mode == DarkMode.Amoled) R.style.AppTheme_Amoled else R.style.AppTheme)
     }
 
     fun isDarkMode(): Boolean {

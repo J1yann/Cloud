@@ -554,7 +554,14 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         }
     }
 
+    private fun playbackReady(): Boolean {
+        if (PlayServiceModule.isPlayerReady.value == true) return true
+        toast("Playback is still starting. You can continue browsing.")
+        return false
+    }
+
     private fun play(item: CloudTrack, collection: List<CloudTrack>? = null) {
+        if (!playbackReady()) return
         if (!item.allowsPlayback) {
             toast("Track unavailable")
             return
@@ -585,7 +592,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 0 -> CloudLibrary.toggleLike(item.id)
                 1 -> addToPlaylist(item)
                 2 -> {
-                    if (item.allowsPlayback) {
+                    if (item.allowsPlayback && playbackReady()) {
                         requireActivity().application.playerController().enqueue(item.toCloudMediaItem())
                         toast("Added to queue")
                     }
@@ -875,6 +882,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun playCollection(tracks: List<CloudTrack>, shuffle: Boolean) {
+        if (!playbackReady()) return
         val playable = tracks.filter { it.allowsPlayback }
         if (playable.isEmpty()) { toast("No playable songs available"); return }
         playable.forEach(CloudLibrary::remember)

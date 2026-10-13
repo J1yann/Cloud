@@ -11,12 +11,30 @@ import cloud.music.storage.preference.ConfigPreferences
 fun isAmoledTheme(): Boolean = ConfigPreferences.darkMode == DarkModeService.DarkMode.Amoled.value
 
 fun Activity.applyCloudTheme(popup: Boolean = false) {
-    setTheme(when {
-        isAmoledTheme() && popup -> R.style.AppTheme_Amoled_Popup
-        isAmoledTheme() -> R.style.AppTheme_Amoled
-        popup -> R.style.AppTheme_Popup
-        else -> R.style.AppTheme
-    })
+    // Keep the activity's window/delegate theme stable; AMOLED changes its palette only.
+    setTheme(if (popup) R.style.AppTheme_Popup else R.style.AppTheme)
+    applyCloudPalette()
+}
+
+fun Activity.applyCloudPalette() {
+    if (isAmoledTheme()) theme.applyStyle(R.style.CloudAmoledPalette, true)
+}
+
+private val pendingThemeRefresh = java.util.WeakHashMap<Activity, Unit>()
+
+/** Refresh a stopped screen when it returns, instead of recreating the entire task at once. */
+fun Activity.refreshCloudThemeIfNeeded() {
+    if (pendingThemeRefresh.containsKey(this)) return
+    val value = TypedValue()
+    val applied = theme.resolveAttribute(R.attr.cloudAmoledActive, value, true) && value.data != 0
+    if (applied == isAmoledTheme()) return
+    pendingThemeRefresh[this] = Unit
+    window.decorView.post {
+        pendingThemeRefresh.remove(this)
+        val current = TypedValue()
+        val active = theme.resolveAttribute(R.attr.cloudAmoledActive, current, true) && current.data != 0
+        if (!isFinishing && !isDestroyed && !isChangingConfigurations && active != isAmoledTheme()) recreate()
+    }
 }
 
 /** XML and programmatic views resolve the same surface palette. */
@@ -38,6 +56,10 @@ fun Context.getCloudColor(@ColorRes resource: Int): Int {
     }
     val value = TypedValue()
     return if (theme.resolveAttribute(attribute, value, true)) {
-        if (value.resourceId != 0) ContextCompat.getColor(this, value.resourceId) else value.data
+        when {
+            value.type in TypedValue.TYPE_FIRST_COLOR_INT..TypedValue.TYPE_LAST_COLOR_INT -> value.data
+            value.resourceId != 0 -> ContextCompat.getColor(this, value.resourceId)
+            else -> ContextCompat.getColor(this, resource)
+        }
     } else ContextCompat.getColor(this, resource)
 }

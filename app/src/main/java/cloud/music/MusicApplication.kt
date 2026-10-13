@@ -6,7 +6,8 @@ import android.content.Intent
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.blankj.utilcode.util.ActivityUtils
-import com.google.common.util.concurrent.MoreExecutors
+import androidx.core.content.ContextCompat
+import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
 import cloud.music.account.service.UserService
 import cloud.music.appwidget.WidgetRepository
@@ -66,10 +67,15 @@ class MusicApplication : Application() {
             SessionToken(this, ComponentName(this, MusicService::class.java))
         val mediaControllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
         mediaControllerFuture.addListener({
-            val player = mediaControllerFuture.get()
-            PlayServiceModule.setPlayer(player)
-            WidgetRepository.init(this)
-        }, MoreExecutors.directExecutor())
+            try {
+                val player = mediaControllerFuture.get()
+                PlayServiceModule.setPlayer(player)
+                WidgetRepository.init(this)
+            } catch (error: Exception) {
+                // Audio initialization must not prevent Home or appearance settings from opening.
+                Log.e("Cloud", "Could not initialize playback", error)
+            }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     private fun initCRouter() {

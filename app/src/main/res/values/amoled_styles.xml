@@ -1,5 +1,6 @@
 <resources>
-    <style name="AppTheme.Amoled" parent="AppTheme">
+    <style name="CloudAmoledPalette">
+        <item name="cloudAmoledActive">true</item>
         <item name="cloudBackgroundColor">#000000</item>
         <item name="cloudSurfaceColor">#0D0D10</item>
         <item name="cloudDialogColor">#0D0D10</item>
@@ -16,10 +17,5 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
-    </style>
-    <style name="AppTheme.Amoled.Popup" parent="AppTheme.Amoled">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowAnimationStyle">@style/AnimationPopup</item>
     </style>
 </resources>

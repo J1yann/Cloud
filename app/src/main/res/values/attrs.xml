@@ -16,4 +16,5 @@
     <attr name="cloudAccentSoft" format="color" />
     <attr name="cloudHeroStart" format="color" />
     <attr name="cloudHeroEnd" format="color" />
+    <attr name="cloudAmoledActive" format="boolean" />
 </resources>

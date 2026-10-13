@@ -17,6 +17,8 @@ import cloud.music.common.BaseMusicActivity
 import cloud.music.common.DarkModeService
 import cloud.music.consts.PreferenceName
 import cloud.music.service.PlayerController
+import cloud.music.service.PlayServiceModule
+import javax.inject.Provider
 import cloud.music.storage.preference.ConfigPreferences
 import cloud.music.utils.MusicUtils
 import me.wcy.router.annotation.Route
@@ -54,7 +56,7 @@ class SettingsActivity : BaseMusicActivity() {
         }
 
         @Inject
-        lateinit var playerController: PlayerController
+        lateinit var playerControllerProvider: Provider<PlayerController>
 
         @Inject
         lateinit var darkModeService: DarkModeService
@@ -162,6 +164,10 @@ class SettingsActivity : BaseMusicActivity() {
         }
 
         private fun startEqualizer() {
+            if (PlayServiceModule.isPlayerReady.value != true) {
+                toast("Playback is still starting. You can continue browsing and changing settings.")
+                return
+            }
             if (MusicUtils.isAudioControlPanelAvailable(requireContext())) {
                 val intent = Intent()
                 val packageName = requireContext().packageName
@@ -170,7 +176,7 @@ class SettingsActivity : BaseMusicActivity() {
                 intent.putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
                 intent.putExtra(
                     AudioEffect.EXTRA_AUDIO_SESSION,
-                    playerController.getAudioSessionId()
+                    playerControllerProvider.get().getAudioSessionId()
                 )
                 try {
                     startActivity(intent)

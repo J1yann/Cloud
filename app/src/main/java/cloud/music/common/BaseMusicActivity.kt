@@ -15,6 +15,12 @@ abstract class BaseMusicActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applyCloudTheme(popupWindow)
         super.onCreate(savedInstanceState)
+        applyCloudPalette()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshCloudThemeIfNeeded()
     }
 
     override fun getLoadingCallback(): Callback {

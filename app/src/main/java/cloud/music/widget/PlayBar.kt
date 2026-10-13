@@ -18,6 +18,7 @@ import cloud.music.R
 import cloud.music.consts.RoutePath
 import cloud.music.databinding.LayoutPlayBarBinding
 import cloud.music.main.playlist.CurrentPlaylistFragment
+import cloud.music.service.PlayServiceModule
 import cloud.music.service.PlayServiceModule.playerController
 import cloud.music.service.PlayState
 import cloud.music.utils.getDuration
@@ -40,6 +41,7 @@ class PlayBar @JvmOverloads constructor(
     private val playerController by lazy {
         CommonApp.app.playerController()
     }
+    private var playerDataBound = false
     private val rotateAnimator: ObjectAnimator
 
     init {
@@ -53,23 +55,33 @@ class PlayBar @JvmOverloads constructor(
             interpolator = LinearInterpolator()
         }
 
+        isVisible = false
         initView()
-        context.findLifecycleOwner()?.let {
-            initData(it)
+        context.findLifecycleOwner()?.let { owner ->
+            PlayServiceModule.isPlayerReady.observe(owner) { ready ->
+                if (ready && !playerDataBound) {
+                    playerDataBound = true
+                    initData(owner)
+                }
+            }
         }
     }
 
     private fun initView() {
         viewBinding.root.setOnClickListener {
+            if (!isPlayerReady()) return@setOnClickListener
             CRouter.with(context).url(RoutePath.PLAYING).start()
         }
         viewBinding.flPlay.setOnClickListener {
+            if (!isPlayerReady()) return@setOnClickListener
             playerController.playPause()
         }
         viewBinding.ivNext.setOnClickListener {
+            if (!isPlayerReady()) return@setOnClickListener
             playerController.next()
         }
         viewBinding.ivPlaylist.setOnClickListener {
+            if (!isPlayerReady()) return@setOnClickListener
             val activity = context.findActivity()
             if (activity is FragmentActivity) {
                 CurrentPlaylistFragment.newInstance()
@@ -77,6 +89,8 @@ class PlayBar @JvmOverloads constructor(
             }
         }
     }
+
+    private fun isPlayerReady(): Boolean = PlayServiceModule.isPlayerReady.value == true
 
     private fun initData(lifecycleOwner: LifecycleOwner) {
         lifecycleOwner.lifecycleScope.launch {

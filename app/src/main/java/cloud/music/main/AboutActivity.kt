@@ -11,12 +11,15 @@ import com.blankj.utilcode.util.AppUtils
 import cloud.music.R
 import cloud.music.common.configureBrowserInsets
 import cloud.music.common.applyCloudTheme
+import cloud.music.common.applyCloudPalette
+import cloud.music.common.refreshCloudThemeIfNeeded
 import top.wangchenyan.common.ui.activity.BaseActivity
 
 class AboutActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applyCloudTheme()
         super.onCreate(savedInstanceState)
+        applyCloudPalette()
         setContentView(R.layout.activity_about)
         configureBrowserInsets()
         findViewById<View>(R.id.about_back).setOnClickListener { finish() }
@@ -44,6 +47,11 @@ class AboutActivity : BaseActivity() {
         findViewById<View>(R.id.about_youtube).setOnClickListener {
             openUrl("https://music.youtube.com")
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshCloudThemeIfNeeded()
     }
 
     private fun share() {
