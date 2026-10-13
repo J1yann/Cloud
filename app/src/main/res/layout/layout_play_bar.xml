@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/play_bar_height"
+    android:background="@color/play_bar_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <com.hjq.shape.layout.ShapeFrameLayout
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:padding="6dp"
+        app:shape_radius="100dp"
+        app:shape_solidColor="@color/black">
+
+        <ImageView
+            android:id="@+id/ivCover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="fitXY"
+            android:src="@drawable/common_bg_image_placeholder_round" />
+    </com.hjq.shape.layout.ShapeFrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:text="@string/no_playing_song"
+            android:textColor="@color/common_text_h1_color"
+            android:textSize="15dp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/flPlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:progress="75"
+            app:indicatorColor="@color/common_text_h1_color"
+            app:indicatorSize="28dp"
+            app:trackColor="@color/common_divider"
+            app:trackCornerRadius="1dp"
+            app:trackThickness="2dp" />
+
+        <ImageView
+            android:id="@+id/ivPlay"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_play_bar_play_pause_selector"
+            app:tint="@color/common_text_h1_color" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/loadingProgress"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            app:indicatorColor="@color/common_theme_color"
+            app:indicatorSize="22dp"
+            app:trackThickness="1.5dp" />
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/ivNext"
+        android:layout_width="40dp"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:padding="10dp"
+        android:src="@drawable/ic_next"
+        app:tint="@color/common_text_h1_color" />
+
+    <ImageView
+        android:id="@+id/ivPlaylist"
+        android:layout_width="40dp"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:padding="10dp"
+        android:src="@drawable/ic_playlist"
+        app:tint="@color/common_text_h1_color" />
+</LinearLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Set gravity to prevent the indicator from filling the entire item -->
+    <item
+        android:bottom="5dp"
+        android:gravity="center_horizontal">
+        <shape>
+            <corners android:radius="10dp" />
+            <size
+                android:width="20dp"
+                android:height="4dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/common_background_color">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="12dp">
+        <ImageButton android:id="@+id/about_back" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_about_back" android:tint="@color/common_text_h1_color" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/about_back" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="@string/about_title" android:textSize="22sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+    </LinearLayout>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp" android:paddingTop="8dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="28dp" android:background="@drawable/bg_cloud_drawer_header">
+            <ImageView android:layout_width="72dp" android:layout_height="72dp" android:src="@drawable/ic_launcher_foreground" android:importantForAccessibility="no" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/app_name" android:textSize="38sp" android:textStyle="bold" android:textColor="#FFFFFF" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/about_tagline" android:textSize="18sp" android:textColor="#FFFFFF" />
+            <TextView android:id="@+id/about_version" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:textSize="13sp" android:textColor="#DBEAFE" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/about_description" android:textSize="15sp" android:lineSpacingExtra="5dp" android:textColor="@color/common_text_h1_color" />
+        <LinearLayout android:id="@+id/about_project" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_project" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_project_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_share" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_share" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_share_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="30dp" android:layout_marginBottom="2dp" android:text="@string/about_credits" android:textSize="13sp" android:textStyle="bold" android:letterSpacing="0.12" android:textColor="@color/common_text_h1_color" />
+        <LinearLayout android:id="@+id/about_creator" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_creator" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_creator_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_ponymusic" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_ponymusic" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_ponymusic_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_youtube" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_youtube" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_youtube_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_newpipe" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_newpipe" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_newpipe_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_simpmusic" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_simpmusic" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_simpmusic_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/about_lyrics" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:layout_marginTop="12dp" android:padding="18dp" android:gravity="center_vertical" android:background="@drawable/bg_card" android:foreground="@drawable/bg_cloud_drawer_item" android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/about_lyrics" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/common_text_h1_color" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/about_lyrics_detail" android:textSize="14sp" android:textColor="@color/common_text_h1_color" />
+            </LinearLayout>
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="16dp" android:src="@drawable/ic_arrow_right" android:tint="@color/common_text_h1_color" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/about_independent" android:textSize="12sp" android:lineSpacingExtra="3dp" android:textColor="@color/common_text_h1_color" />
+    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

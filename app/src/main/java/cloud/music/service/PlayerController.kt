@@ -1,0 +1,58 @@
+package cloud.music.service
+
+import androidx.annotation.MainThread
+import androidx.media3.common.MediaItem
+import androidx.media3.session.MediaController
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Created by wangchenyan.top on 2024/3/26.
+ */
+interface PlayerController {
+    val mediaController: MediaController
+    val playlist: StateFlow<List<MediaItem>>
+    val currentSong: StateFlow<MediaItem?>
+    val playState: StateFlow<PlayState>
+    val playProgress: StateFlow<Long>
+    val bufferingPercent: StateFlow<Int>
+    val playMode: StateFlow<PlayMode>
+
+    @MainThread
+    fun addAndPlay(song: MediaItem)
+
+    @MainThread
+    fun enqueue(song: MediaItem)
+
+    @MainThread
+    fun replaceAll(songList: List<MediaItem>, song: MediaItem)
+
+    @MainThread
+    fun play(mediaId: String)
+
+    @MainThread
+    fun delete(song: MediaItem)
+
+    @MainThread
+    fun clearPlaylist()
+
+    @MainThread
+    fun playPause()
+
+    @MainThread
+    fun next()
+
+    @MainThread
+    fun prev()
+
+    @MainThread
+    fun seekTo(msec: Int)
+
+    @MainThread
+    fun getAudioSessionId(): Int
+
+    @MainThread
+    fun setPlayMode(mode: PlayMode)
+
+    @MainThread
+    fun stop()
+}

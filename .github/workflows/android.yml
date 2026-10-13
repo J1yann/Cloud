@@ -1,0 +1,72 @@
+name: Android debug build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out Cloud
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle and dependency cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Read Android SDK versions
+        id: sdk
+        shell: bash
+        run: |
+          sdk_version=$(sed -n 's/^compileSdk = "\([0-9]*\)"/\1/p' gradle/libs.versions.toml)
+          test -n "$sdk_version"
+          echo "version=$sdk_version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android SDK packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/platforms/android-${{ steps.sdk.outputs.version }}
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0
+          key: android-sdk-v2-${{ runner.os }}-${{ steps.sdk.outputs.version }}-${{ hashFiles('gradle/libs.versions.toml', '.github/workflows/android.yml') }}
+
+      - name: Install compile SDK
+        shell: bash
+        env:
+          CLOUD_COMPILE_SDK: ${{ steps.sdk.outputs.version }}
+        run: sdkmanager "platforms;android-${CLOUD_COMPILE_SDK}" "build-tools;36.0.0"
+
+      - name: Configure SDK path
+        shell: bash
+        run: printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+
+      - name: Build debug APK
+        shell: bash
+        run: bash ./gradlew :app:assembleDebug --build-cache --stacktrace
+

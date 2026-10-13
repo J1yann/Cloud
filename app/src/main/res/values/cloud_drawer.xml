@@ -1,0 +1,14 @@
+<resources>
+    <string name="cloud_drawer_close">Close sidebar</string>
+    <string name="cloud_drawer_tagline">Your music. Your space.</string>
+    <string name="cloud_drawer_collection">YOUR COLLECTION</string>
+    <string name="cloud_drawer_summary">%1$d liked tracks · %2$d playlists</string>
+    <string name="cloud_drawer_listening">Listening</string>
+    <string name="cloud_drawer_app">Cloud</string>
+    <string name="cloud_drawer_version">Cloud %1$s</string>
+    <style name="CloudDrawerItemText" parent="TextAppearance.AppCompat.Body1">
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/common_text_h1_color</item>
+    </style>
+</resources>

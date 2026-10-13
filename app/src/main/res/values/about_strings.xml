@@ -1,0 +1,26 @@
+<resources>
+    <string name="about_back">Back</string>
+    <string name="about_title">About Cloud</string>
+    <string name="about_tagline">Find your next favorite.</string>
+    <string name="about_version_label">Version %1$s · Android</string>
+    <string name="about_description">Discover music, build your own playlists, and keep the tracks you love close. Cloud brings YouTube Music discovery together with a player made for everyday listening.</string>
+    <string name="about_project">Explore the project</string>
+    <string name="about_project_detail">Releases, source code, and feedback on GitHub</string>
+    <string name="about_share">Share Cloud</string>
+    <string name="about_share_detail">Send the app to someone who loves music</string>
+    <string name="about_credits">THE PEOPLE &amp; TOOLS BEHIND CLOUD</string>
+    <string name="about_creator">J1yann</string>
+    <string name="about_creator_detail">Creator of Cloud · Visit GitHub profile</string>
+    <string name="about_ponymusic">Built on PonyMusic</string>
+    <string name="about_ponymusic_detail">UI foundations and playback engine by wangchenyan</string>
+    <string name="about_youtube">Music from YouTube Music</string>
+    <string name="about_youtube_detail">Track, artist, and playlist discovery</string>
+    <string name="about_independent">Cloud is an independent project and is not affiliated with YouTube or Google. Music belongs to its respective creators.</string>
+    <string name="about_no_handler">No app is available to open this action.</string>
+    <string name="about_newpipe">NewPipe Extractor</string>
+    <string name="about_newpipe_detail">On-device audio extraction · GPLv3</string>
+    <string name="about_lyrics">Lyrics from LRCLIB</string>
+    <string name="about_lyrics_detail">Synchronized and plain-text lyrics</string>
+    <string name="about_simpmusic">Inspired by SimpMusic</string>
+    <string name="about_simpmusic_detail">Discovery, player, and album design</string>
+</resources>

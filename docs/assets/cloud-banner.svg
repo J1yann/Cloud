@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Cloud — Find your next favorite</title>
+  <desc id="desc">Cloud music player logo on a blue gradient, with the words Discover, listen, make it yours.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#102A47"/><stop offset="1" stop-color="#346E8B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="360" rx="32" fill="url(#background)"/>
+  <circle cx="1070" cy="40" r="230" fill="#FFFFFF" opacity=".035"/>
+  <circle cx="1060" cy="350" r="185" fill="#FFFFFF" opacity=".035"/>
+  <g transform="translate(52 66) scale(2.1)">
+    <path fill="#FFFFFF" d="M35,69C27,69 23,64 23,57C23,50 28,45 35,45C38,34 47,29 57,32C65,34 70,40 72,48C80,48 85,53 85,60C85,65 81,69 75,69Z"/>
+    <path fill="#173B65" d="M51,44L51,61C49,60 46,60 44,62C41,65 42,69 46,70C50,71 55,68 55,64L55,50L66,47L66,58C64,57 61,58 59,60C57,63 58,67 62,68C66,69 70,66 70,62L70,39Z"/>
+  </g>
+  <g font-family="system-ui, sans-serif" fill="#FFFFFF">
+    <text x="306" y="146" font-size="76" font-weight="700" letter-spacing="-2">Cloud</text>
+    <text x="310" y="202" font-size="29">Find your next favorite.</text>
+    <text x="310" y="251" font-size="19" fill="#DBEAFE">Discover, listen, make it yours.</text>
+  </g>
+</svg>

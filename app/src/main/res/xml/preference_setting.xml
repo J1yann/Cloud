@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference android:selectable="false" android:layout="@layout/settings_header_card" />
+
+    <PreferenceCategory android:title="YOUR EXPERIENCE" android:layout="@layout/settings_preference_category">
+        <ListPreference
+            android:layout="@layout/settings_preference_row"
+            android:defaultValue="0"
+            android:icon="@drawable/ic_menu_settings"
+            android:dialogTitle="Appearance"
+            android:entries="@array/dark_mode_entries"
+            android:entryValues="@array/dark_mode_values"
+            android:key="@string/setting_key_dark_mode"
+            android:summary="System default"
+            android:title="Appearance" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="SOUND" android:layout="@layout/settings_preference_category">
+
+        <Preference
+            android:layout="@layout/settings_preference_row"
+            android:icon="@drawable/ic_volume"
+            android:summary="Shape your sound with your device’s equalizer"
+            android:key="@string/setting_key_sound_effect"
+            android:title="@string/sound_effect" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="LOCAL LIBRARY" android:layout="@layout/settings_preference_category">
+
+        <ListPreference
+            android:layout="@layout/settings_preference_row"
+            android:defaultValue="0"
+            android:icon="@drawable/ic_local_music"
+            android:dialogTitle="Minimum file size"
+            android:entries="@array/filter_size_entries"
+            android:entryValues="@array/filter_size_entry_values"
+            android:key="@string/setting_key_filter_size"
+            android:summary="No filter"
+            android:title="Filter by file size" />
+
+        <ListPreference
+            android:layout="@layout/settings_preference_row"
+            android:defaultValue="0"
+            android:icon="@drawable/ic_menu_timer"
+            android:dialogTitle="Minimum duration"
+            android:entries="@array/filter_time_entries"
+            android:entryValues="@array/filter_time_entry_values"
+            android:key="@string/setting_key_filter_time"
+            android:summary="No filter"
+            android:title="Filter by duration" />
+    </PreferenceCategory>
+</PreferenceScreen>

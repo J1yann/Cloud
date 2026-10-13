@@ -1,0 +1,14 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+/.kotlin
+.DS_Store
+build/
+/captures
+
+# Release signing material belongs in GitHub secrets.
+*.keystore
+*.jks
+*.p12
+*.pfx

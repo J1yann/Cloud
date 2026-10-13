@@ -1,0 +1,118 @@
+name: Publish Cloud APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release version tag (for example v0.1.0)
+        required: true
+        default: v0.2.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloud-release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Cloud
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle and dependency cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Read Android SDK versions
+        id: sdk
+        run: |
+          sdk_version=$(sed -n 's/^compileSdk = "\([0-9]*\)"/\1/p' gradle/libs.versions.toml)
+          test -n "$sdk_version"
+          echo "version=$sdk_version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android SDK packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/platforms/android-${{ steps.sdk.outputs.version }}
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0
+          key: android-sdk-v2-${{ runner.os }}-${{ steps.sdk.outputs.version }}-${{ hashFiles('gradle/libs.versions.toml', '.github/workflows/android.yml') }}
+
+      - name: Install compile SDK
+        env:
+          CLOUD_COMPILE_SDK: ${{ steps.sdk.outputs.version }}
+        run: sdkmanager "platforms;android-${CLOUD_COMPILE_SDK}" "build-tools;36.0.0"
+
+      - name: Prepare release signing
+        env:
+          CLOUD_KEYSTORE_BASE64: ${{ secrets.CLOUD_KEYSTORE_BASE64 }}
+          CLOUD_RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          test -n "$CLOUD_KEYSTORE_BASE64"
+          [[ "$CLOUD_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][a-zA-Z0-9.-]+)?$ ]]
+          app_version=$(sed -n 's/^versionName = "\([^"]*\)"/\1/p' gradle/libs.versions.toml)
+          if [[ "${CLOUD_RELEASE_TAG#v}" != "$app_version" ]]; then
+            echo "Release tag must match app versionName ($app_version)" >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$CLOUD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cloud.p12"
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+          echo "CLOUD_KEYSTORE_PATH=$RUNNER_TEMP/cloud.p12" >> "$GITHUB_ENV"
+          echo "CLOUD_RELEASE_TAG=$CLOUD_RELEASE_TAG" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          CLOUD_STORE_PASSWORD: ${{ secrets.CLOUD_STORE_PASSWORD }}
+          CLOUD_KEY_ALIAS: cloud
+          CLOUD_KEY_PASSWORD: ${{ secrets.CLOUD_STORE_PASSWORD }}
+        run: bash ./gradlew :app:assembleRelease --build-cache --stacktrace
+
+      - name: Verify APK signature
+        run: |
+          apk=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          cp "$apk" "$RUNNER_TEMP/cloud-${CLOUD_RELEASE_TAG#v}.apk"
+          cd "$RUNNER_TEMP"
+          sha256sum "cloud-${CLOUD_RELEASE_TAG#v}.apk" > "cloud-${CLOUD_RELEASE_TAG#v}.apk.sha256"
+
+      - name: Publish APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$CLOUD_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            release_flags=()
+            if [[ "${CLOUD_RELEASE_TAG#v}" =~ ^[0-9]+\.[0-9]+\.[0-9]+- ]]; then
+              release_flags+=(--prerelease)
+            fi
+            gh release create "$CLOUD_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Cloud ${CLOUD_RELEASE_TAG#v}" \
+              "${release_flags[@]}" --generate-notes
+          fi
+          gh release upload "$CLOUD_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            "$RUNNER_TEMP/cloud-${CLOUD_RELEASE_TAG#v}.apk" \
+            "$RUNNER_TEMP/cloud-${CLOUD_RELEASE_TAG#v}.apk.sha256" --clobber
+
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/cloud.p12"

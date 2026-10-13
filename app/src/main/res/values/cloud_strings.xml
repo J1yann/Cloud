@@ -1,0 +1,15 @@
+<resources>
+    <string name="cloud_search_hint">Search songs, artists, albums, and playlists</string>
+    <string name="cloud_all">All</string>
+    <string name="cloud_albums">Albums</string>
+    <string name="cloud_tracks">Songs</string>
+    <string name="cloud_artists">Artists</string>
+    <string name="cloud_artist">Artist</string>
+    <string name="cloud_playlists">Playlists</string>
+    <string name="cloud_home">Home</string>
+    <string name="cloud_trending">Trending</string>
+    <string name="cloud_more">Load more</string>
+    <string name="cloud_unavailable">Unavailable</string>
+    <string name="cloud_open_source">Open on YouTube Music</string>
+    <string name="cloud_retry">Could not load. Tap to retry.</string>
+</resources>

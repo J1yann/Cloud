@@ -1,0 +1,8 @@
+<resources>
+<style name="CloudPlayerArtwork"><item name="cornerFamily">rounded</item><item name="cornerSize">12dp</item></style>
+<string name="player_now_playing">NOW PLAYING</string><string name="player_lyrics">Lyrics</string><string name="player_artwork">Artwork</string>
+<string name="player_lyrics_source">Lyrics · LRCLIB</string><string name="player_local_lyrics">Lyrics · Local file</string>
+<string name="player_lyrics_loading">Finding lyrics…</string><string name="player_instrumental">Instrumental · No lyrics</string><string name="player_no_lyrics">No matching lyrics available</string><string name="player_lyrics_error">Could not load lyrics. Check your connection.</string>
+<string name="player_show_lyrics">Album artwork. Show lyrics</string><string name="player_close">Close player</string><string name="player_like">Like track</string><string name="player_mode">Change repeat or shuffle mode</string><string name="player_previous">Previous track</string><string name="player_next">Next track</string><string name="player_queue">Open queue</string><string name="player_play_pause">Play or pause</string><string name="player_seek">Playback position</string>
+<string name="player_unlike">Unlike track</string>
+</resources>

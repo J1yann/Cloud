@@ -1,0 +1,10 @@
+<resources>
+    <color name="cloud_accent">#173B65</color>
+    <color name="cloud_accent_soft">#E8F1F6</color>
+    <string name="cloud_timer_title">Sleep timer</string>
+    <string name="cloud_timer_description">Let the music wind down. Cloud will close when the timer ends.</string>
+    <string name="cloud_timer_apply">Set timer</string>
+    <string name="cloud_timer_off">Turn off timer</string>
+    <string name="cloud_timer_minutes">%1$d min</string>
+    <string name="cloud_timer_disabled">Off</string>
+</resources>

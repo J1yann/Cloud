@@ -1,0 +1,190 @@
+package cloud.music.discover.ranking
+
+import android.view.View
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.viewbinding.ViewBinding
+import com.blankj.utilcode.util.ScreenUtils
+import com.blankj.utilcode.util.SizeUtils
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import cloud.music.R
+import cloud.music.common.BaseMusicFragment
+import cloud.music.common.bean.PlaylistData
+import cloud.music.consts.RoutePath
+import cloud.music.databinding.FragmentRankingBinding
+import cloud.music.discover.DiscoverApi
+import cloud.music.discover.ranking.item.OfficialRankingItemBinder
+import cloud.music.discover.ranking.item.RankingTitleItemBinding
+import cloud.music.discover.ranking.item.SelectedRankingItemBinder
+import cloud.music.discover.ranking.item.SelectedRankingSpacingDecoration
+import cloud.music.discover.ranking.viewmodel.RankingViewModel
+import cloud.music.service.PlayerController
+import cloud.music.utils.toMediaItem
+import me.wcy.radapter3.RAdapter
+import me.wcy.radapter3.RItemBinder
+import me.wcy.radapter3.RTypeMapper
+import me.wcy.router.CRouter
+import me.wcy.router.annotation.Route
+import top.wangchenyan.common.ext.getColor
+import top.wangchenyan.common.ext.viewBindings
+import javax.inject.Inject
+
+/**
+ * Created by wangchenyan.top on 2023/10/25.
+ */
+@Route(RoutePath.RANKING)
+@AndroidEntryPoint
+class RankingFragment : BaseMusicFragment() {
+    private val viewBinding by viewBindings<FragmentRankingBinding>()
+    private val viewModel by viewModels<RankingViewModel>()
+    private val adapter by lazy { RAdapter<Any>() }
+
+    @Inject
+    lateinit var playerController: PlayerController
+
+    private val spanCount: Int by lazy {
+        val containerWidth = ScreenUtils.getAppScreenWidth() - SizeUtils.dp2px(32f)
+        val itemWidth = resources.getDimensionPixelSize(R.dimen.playlist_item_max_width)
+        val itemSpace = SizeUtils.dp2px(10f)
+        val count = containerWidth / (itemWidth + itemSpace)
+        count.coerceAtLeast(3)
+    }
+    private val itemWidth: Int by lazy {
+        val containerWidth = ScreenUtils.getAppScreenWidth() - SizeUtils.dp2px(32f)
+        val itemSpace = SizeUtils.dp2px(10f)
+        (containerWidth - itemSpace * (spanCount - 1)) / spanCount
+    }
+
+    override fun getRootView(): View {
+        return viewBinding.root
+    }
+
+    override fun isUseLoadSir(): Boolean {
+        return true
+    }
+
+    override fun getLoadSirTarget(): View {
+        return viewBinding.recyclerView
+    }
+
+    override fun onReload() {
+        super.onReload()
+        loadData()
+    }
+
+    override fun onLazyCreate() {
+        super.onLazyCreate()
+
+        configWindowInsets {
+            navBarColor = getColor(R.color.play_bar_bg)
+        }
+
+        initView()
+        initDataObserver()
+        loadData()
+    }
+
+    private fun loadData() {
+        lifecycleScope.launch {
+            showLoadSirLoading()
+            val res = viewModel.loadData()
+            if (res.isSuccess()) {
+                showLoadSirSuccess()
+            } else {
+                showLoadSirError(res.msg)
+            }
+        }
+    }
+
+    private fun initView() {
+        adapter.register(PlaylistData::class, object : RTypeMapper<PlaylistData> {
+            private val officialItemBinder = OfficialRankingItemBinder(object :
+                OfficialRankingItemBinder.OnItemClickListener {
+                override fun onItemClick(item: PlaylistData, position: Int) {
+                    openRankingDetail(item)
+                }
+
+                override fun onPlayClick(item: PlaylistData, position: Int) {
+                    playPlaylist(item)
+                }
+            })
+            private val selectedItemBinder = SelectedRankingItemBinder(
+                itemWidth,
+                object : SelectedRankingItemBinder.OnItemClickListener {
+                    override fun onItemClick(item: PlaylistData, position: Int) {
+                        openRankingDetail(item)
+                    }
+
+                    override fun onPlayClick(item: PlaylistData, position: Int) {
+                        playPlaylist(item)
+                    }
+                })
+
+            override fun map(data: PlaylistData): RItemBinder<out ViewBinding, PlaylistData> {
+                return if (data.toplistType.isNotEmpty()) {
+                    officialItemBinder
+                } else {
+                    selectedItemBinder
+                }
+            }
+        })
+        adapter.register(RankingTitleItemBinding())
+        viewBinding.recyclerView.layoutManager =
+            GridLayoutManager(requireContext(), spanCount).apply {
+                spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val dataList = viewModel.rankingList.value ?: return 1
+                        val item = dataList.getOrNull(position) ?: return 1
+                        return if (item is RankingViewModel.TitleData
+                            || (item is PlaylistData && item.toplistType.isNotEmpty())
+                        ) {
+                            this@RankingFragment.spanCount
+                        } else {
+                            1
+                        }
+                    }
+                }
+            }
+        val spacing = SizeUtils.dp2px(10f)
+        viewBinding.recyclerView.addItemDecoration(
+            SelectedRankingSpacingDecoration(spacing, spacing) {
+                viewModel.rankingList.value.orEmpty().indexOfFirst {
+                    it is PlaylistData && it.toplistType.isEmpty()
+                }
+            })
+        viewBinding.recyclerView.adapter = adapter
+    }
+
+    private fun initDataObserver() {
+        viewModel.rankingList.observe(this) { rankingList ->
+            rankingList ?: return@observe
+            adapter.refresh(rankingList)
+        }
+    }
+
+    private fun openRankingDetail(item: PlaylistData) {
+        CRouter.with(requireActivity())
+            .url(RoutePath.PLAYLIST_DETAIL)
+            .extra("id", item.id)
+            .start()
+    }
+
+    private fun playPlaylist(playlistData: PlaylistData) {
+        lifecycleScope.launch {
+            showLoading()
+            kotlin.runCatching {
+                DiscoverApi.getFullPlaylistSongList(playlistData.id)
+            }.onSuccess { songListData ->
+                dismissLoading()
+                if (songListData.code == 200 && songListData.songs.isNotEmpty()) {
+                    val songs = songListData.songs.map { it.toMediaItem() }
+                    playerController.replaceAll(songs, songs[0])
+                }
+            }.onFailure {
+                dismissLoading()
+            }
+        }
+    }
+}
