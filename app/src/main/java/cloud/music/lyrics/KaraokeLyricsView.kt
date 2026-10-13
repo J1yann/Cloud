@@ -23,6 +23,14 @@ class KaraokeLyricsView @JvmOverloads constructor(
 ) : NestedScrollView(context, attrs) {
     private data class Row(val line: LyricLine, val view: TextView, val highlights: List<WordFill>)
     private val content = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+    private val creditFooter = TextView(context).apply {
+        layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(24)
+        }
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+        setTextColor(0xBFFFFFFF.toInt())
+        setPadding(dp(8), dp(8), dp(8), dp(8))
+    }
     private val rows = mutableListOf<Row>()
     private var activeRow = -1
     private var playing = false
@@ -87,10 +95,18 @@ class KaraokeLyricsView @JvmOverloads constructor(
         post { positionProvider?.let { updatePosition(it()) } }
     }
 
+    /** Provider credit belongs to the end of the lyrics, inside the scrollable content. */
+    fun setCredit(credit: String) {
+        content.removeView(creditFooter)
+        creditFooter.text = credit
+        if (credit.isNotBlank()) content.addView(creditFooter)
+    }
+
     private fun reset() {
         rows.clear()
         activeRow = -1
         content.removeAllViews()
+        creditFooter.text = ""
         scrollTo(0, 0)
     }
 

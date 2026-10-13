@@ -1,5 +1,11 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:paddingStart="16dp" android:paddingEnd="16dp">
-  <ImageView android:id="@+id/ivClose" android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp" android:src="@drawable/ic_arrow_down" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/player_close" app:tint="@android:color/white" />
-  <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/player_now_playing" android:gravity="center" android:textColor="#DBEAFE" android:textSize="12sp" android:letterSpacing="0.12" android:textStyle="bold" />
-  <TextView android:id="@+id/lyricsToggle" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="64dp" android:gravity="center" android:text="@string/player_lyrics" android:textColor="@android:color/white" android:textSize="14sp" android:background="@drawable/bg_player_lyrics_toggle" android:clickable="true" android:focusable="true" android:paddingStart="12dp" android:paddingEnd="12dp" />
-</LinearLayout>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="48dp" android:paddingStart="16dp" android:paddingEnd="16dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/player_now_playing" android:gravity="center" android:textColor="#DBEAFE" android:textSize="12sp" android:letterSpacing="0.12" android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" />
+    <ImageView android:id="@+id/ivClose" android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp" android:src="@drawable/ic_arrow_down" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/player_close" app:tint="@android:color/white"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" />
+    <TextView android:id="@+id/lyricsToggle" android:layout_width="96dp" android:layout_height="48dp" android:gravity="center" android:paddingStart="12dp" android:paddingEnd="12dp" android:singleLine="true" android:ellipsize="end"
+        android:text="@string/player_lyrics" android:textColor="@android:color/white" android:textSize="14sp" android:background="@drawable/bg_player_lyrics_toggle" android:clickable="true" android:focusable="true"
+        app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toTopOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

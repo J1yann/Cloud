@@ -336,7 +336,7 @@ class PlayingActivity : BaseMusicActivity() {
         lyricsDurationMs = knownDuration(song)
         val duration = lyricsDurationMs
         setLrcLabel(getString(R.string.player_lyrics_loading))
-        viewBinding.lyricsCredit.text = ""
+        viewBinding.lrcView.setCredit("")
         loadLrcJob = lifecycleScope.launch {
             try {
                 val lrcPath = LrcCache.getLrcFilePath(song)
@@ -348,7 +348,7 @@ class PlayingActivity : BaseMusicActivity() {
                     if (playerController.currentSong.value?.mediaId != song.mediaId) return@launch
                     if (lines.isNotEmpty()) {
                         viewBinding.lrcView.showLines(lines)
-                        viewBinding.lyricsCredit.text = getString(R.string.player_local_lyrics)
+                        viewBinding.lrcView.setCredit(getString(R.string.player_local_lyrics))
                         return@launch
                     }
                 }
@@ -374,7 +374,7 @@ class PlayingActivity : BaseMusicActivity() {
                 throw e
             } catch (_: Exception) {
                 setLrcLabel(getString(R.string.player_lyrics_error))
-                viewBinding.lyricsCredit.text = ""
+                viewBinding.lrcView.setCredit("")
             }
         }
     }
@@ -383,7 +383,6 @@ class PlayingActivity : BaseMusicActivity() {
         val timing = if (lyrics.lines.any { it.words.isNotEmpty() }) getString(R.string.player_word_synced)
             else if (lyrics.lines.isNotEmpty()) getString(R.string.player_line_synced)
             else getString(R.string.player_plain_lyrics)
-        viewBinding.lyricsCredit.text = getString(R.string.player_lyrics_credit, lyrics.source, timing)
         when {
             lyrics.instrumental -> setLrcLabel(getString(R.string.player_instrumental))
             lyrics.lines.isNotEmpty() -> {
@@ -393,9 +392,10 @@ class PlayingActivity : BaseMusicActivity() {
             lyrics.plain.isNotBlank() -> viewBinding.lrcView.showPlain(lyrics.plain)
             else -> {
                 setLrcLabel(getString(R.string.player_no_lyrics))
-                viewBinding.lyricsCredit.text = ""
+                return
             }
         }
+        viewBinding.lrcView.setCredit(getString(R.string.player_lyrics_credit, lyrics.source, timing))
     }
 
     private fun setLrcLabel(label: String) {
