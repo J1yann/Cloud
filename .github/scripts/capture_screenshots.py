@@ -75,7 +75,8 @@ def optional(name, action):
 
 
 def launch():
-    adb('shell', 'am', 'start', '-W', '-n', 'cloud.music/.main.MainActivity')
+    result = adb('shell', 'am', 'start', '-W', '-n', 'cloud.music/.main.MainActivity')
+    print(result.strip(), flush=True)
     time.sleep(3)
 
 
@@ -100,6 +101,14 @@ launch()
 time.sleep(25)
 try:
     if not any(n.attrib.get('package') == 'cloud.music' for n in hierarchy().iter('node')):
+        capture('00-startup-diagnostic')
+        nodes = hierarchy()
+        print('Foreground UI: ' + json.dumps([
+            {k: n.attrib.get(k, '') for k in ('package', 'text', 'content-desc')}
+            for n in nodes.iter('node') if n.attrib.get('text') or n.attrib.get('content-desc')
+        ])[:5000], flush=True)
+        crash = adb('logcat', '-d', '-b', 'crash')
+        print(re.sub(r'https?://\S+', '[URL]', crash)[-10000:], flush=True)
         raise RuntimeError('Cloud did not stay in the foreground')
     capture('01-home')
 
