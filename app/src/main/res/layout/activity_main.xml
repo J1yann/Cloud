@@ -54,6 +54,8 @@
             app:itemIconTint="?attr/cloudTextSecondary"
             app:itemTextColor="?attr/cloudTextPrimary"
             app:itemTextAppearance="@style/CloudDrawerItemText"
+            app:subheaderColor="@color/cloud_text_secondary"
+            app:subheaderTextAppearance="@style/CloudDrawerItemText"
             app:menu="@menu/navigation_menu" />
 
         <View

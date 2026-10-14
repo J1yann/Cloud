@@ -18,8 +18,8 @@
         <item name="cloudHeroEnd">@color/cloud_hero_end</item>
         <item name="android:windowBackground">?attr/cloudBackgroundColor</item>
         <item name="android:colorBackground">?attr/cloudBackgroundColor</item>
-        <item name="android:textColorPrimary">?attr/cloudTextPrimary</item>
-        <item name="android:textColorSecondary">?attr/cloudTextSecondary</item>
+        <item name="android:textColorPrimary">@color/cloud_text_primary</item>
+        <item name="android:textColorSecondary">@color/cloud_text_secondary</item>
         <item name="colorControlNormal">?attr/cloudTextSecondary</item>
         <item name="alertDialogTheme">@style/CloudDialogTheme</item>
         <item name="android:scrollbars">none</item>
