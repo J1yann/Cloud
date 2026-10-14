@@ -115,7 +115,7 @@ try:
     def search_screen():
         text('Search', last=True)
         click(lambda a: a.get('class') == 'android.widget.EditText')
-        adb('shell', 'input', 'text', 'Blinding%20Lights')
+        adb('shell', 'input', 'text', 'Blinding%sLights')
         adb('shell', 'input', 'keyevent', 'KEYCODE_ENTER')
         time.sleep(18)
         capture('02-search')
