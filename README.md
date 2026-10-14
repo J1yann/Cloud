@@ -11,6 +11,15 @@
 <p align="center">Listen to YouTube Music without signing in. Discover songs, build playlists, and keep listening with Cloud.</p>
 <p align="center"><a href="https://github.com/J1yann/Cloud/releases/latest"><strong>Download the APK</strong></a> · <a href="https://github.com/J1yann/Cloud/issues">Report an issue</a></p>
 
+## A look inside Cloud
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Cloud Home with discovery and new releases" width="23%" />
+  <img src="docs/screenshots/player.png" alt="Full-screen player with album artwork" width="23%" />
+  <img src="docs/screenshots/lyrics.png" alt="Synchronized lyrics view" width="23%" />
+  <img src="docs/screenshots/settings.png" alt="Cloud appearance and playback settings" width="23%" />
+</p>
+
 ## Your music, within reach
 
 | Discover | Listen | Make it yours |
