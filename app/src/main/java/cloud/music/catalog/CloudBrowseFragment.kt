@@ -975,10 +975,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         val snapshot = navigationHistory.lastOrNull() ?: run {
             // If a very deep trail exceeded the bounded snapshot cache, return to this tab's
             // root instead of allowing a detail page to close the app.
-            val root = currentScreen == null || currentScreen == BrowserScreen.Home ||
-                currentScreen == BrowserScreen.SearchWelcome || currentScreen is BrowserScreen.Search ||
-                currentScreen == BrowserScreen.Library
-            if (root) return false
+            if (isTabRoot()) return false
             if (libraryOnly) { openedPlaylist = null; library() }
             else if (searchOnly && query.isNotBlank()) search()
             else if (searchOnly) searchWelcome() else home()
@@ -1041,8 +1038,13 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun refreshBackHandling() {
-        backCallback?.isEnabled = activity !is MainActivity && isVisible && isResumed && navigationHistory.isNotEmpty()
+        backCallback?.isEnabled = activity !is MainActivity && isVisible && isResumed &&
+            (navigationHistory.isNotEmpty() || !isTabRoot())
     }
+
+    private fun isTabRoot(): Boolean = currentScreen == null || currentScreen == BrowserScreen.Home ||
+        currentScreen == BrowserScreen.SearchWelcome || currentScreen is BrowserScreen.Search ||
+        currentScreen == BrowserScreen.Library
 
     override fun onResume() { super.onResume(); refreshBackHandling() }
     override fun onPause() { backCallback?.isEnabled = false; super.onPause() }
