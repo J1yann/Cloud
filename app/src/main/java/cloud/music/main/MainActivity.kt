@@ -4,6 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuItem
+import androidx.activity.OnBackPressedCallback
+import cloud.music.catalog.CloudBrowseFragment
+import cloud.music.discover.home.DiscoverFragment
+import cloud.music.search.SearchFragment
+import cloud.music.mine.home.MineFragment
 import androidx.annotation.DrawableRes
 import androidx.core.view.GravityCompat
 import androidx.lifecycle.lifecycleScope
@@ -64,6 +69,7 @@ class MainActivity : BaseMusicActivity() {
             setup()
         }
         initDrawer()
+        configureBackNavigation()
         parseIntent()
         PlayServiceModule.isPlayerReady.observe(this) { isReady ->
             if (isReady) parseIntent()
@@ -107,6 +113,37 @@ class MainActivity : BaseMusicActivity() {
 
     fun openSearch() {
         viewBinding.viewPager.setCurrentItem(NaviTab.Search.getPosition(), false)
+    }
+
+    fun isCloudTabActive(fragment: CloudBrowseFragment): Boolean = when (viewBinding.viewPager.currentItem) {
+        0 -> fragment is DiscoverFragment
+        1 -> fragment is SearchFragment
+        2 -> fragment is MineFragment
+        else -> false
+    }
+
+    private fun configureBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (viewBinding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    viewBinding.drawerLayout.closeDrawers()
+                    return
+                }
+                val browser = supportFragmentManager.fragments.filterIsInstance<CloudBrowseFragment>()
+                    .firstOrNull { it.view != null && isCloudTabActive(it) }
+                if (browser?.navigateBackIfPossible() == true) return
+                if (viewBinding.viewPager.currentItem != 0) {
+                    viewBinding.viewPager.setCurrentItem(0, false)
+                    return
+                }
+                isEnabled = false
+                try {
+                    onBackPressedDispatcher.onBackPressed()
+                } finally {
+                    isEnabled = true
+                }
+            }
+        })
     }
 
     private fun parseIntent() {

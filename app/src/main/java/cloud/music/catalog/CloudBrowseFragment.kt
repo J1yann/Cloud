@@ -7,6 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.doOnLayout
 import cloud.music.utils.ImageUtils.loadCover
 import android.view.inputmethod.EditorInfo
 import android.graphics.Typeface
@@ -68,13 +70,39 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private var query = ""
     private var kind = 0
     private var discovery: CloudDestination? = null
-    private val discoveryTrail = mutableListOf<CloudDestination>()
+    private var browserScroll: ScrollView? = null
+    private var currentScreen: BrowserScreen? = null
+    private val navigationHistory = mutableListOf<BrowserSnapshot>()
+    private var restoringNavigation = false
+    private var backCallback: OnBackPressedCallback? = null
+    private var navigationRevision = 0L
+    private var activeLoad: PendingLoad? = null
     private var displayedArtist: CloudArtist? = null
     private var playbackCollection: List<CloudTrack>? = null
     private var collectionObserver: Job? = null
     private val collectionRows = mutableListOf<CollectionRow>()
 
     private data class CollectionRow(val item: CloudTrack, val number: Int, val marker: TextView, val title: TextView)
+
+    private sealed class BrowserScreen {
+        object Home : BrowserScreen()
+        object SearchWelcome : BrowserScreen()
+        data class Search(val query: String, val kind: Int) : BrowserScreen()
+        object Library : BrowserScreen()
+        data class LocalPlaylist(val id: String) : BrowserScreen()
+        data class Discovery(val destination: CloudDestination) : BrowserScreen()
+        data class Artist(val artist: CloudArtist) : BrowserScreen()
+        data class Playlist(val playlist: CloudPlaylist) : BrowserScreen()
+    }
+
+    private data class BrowserSnapshot(
+        val screen: BrowserScreen, val children: List<View>, val scrollY: Int,
+        val query: String, val kind: Int, val next: TextView?, val discovery: CloudDestination?,
+        val artist: CloudArtist?, val rows: List<CollectionRow>, val libraryRevision: Int,
+        val pending: PendingLoad?,
+    )
+
+    private data class PendingLoad(val clear: Boolean, val work: suspend () -> Unit, val indicator: View)
 
     override fun isLazy(): Boolean = false
 
@@ -142,6 +170,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 } else false
             }
             input.doAfterTextChanged {
+                if (restoringNavigation) return@doAfterTextChanged
                 debounce?.cancel()
                 val value = it?.toString()?.trim().orEmpty()
                 if (value.isNotBlank()) debounce = viewLifecycleOwner.lifecycleScope.launch {
@@ -159,6 +188,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             isFillViewport = true; clipToPadding = false
             isVerticalScrollBarEnabled = false; isHorizontalScrollBarEnabled = false
         }
+        browserScroll = scroll
         results = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(24))
@@ -185,10 +215,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun searchWelcome() {
+        beginScreen(BrowserScreen.SearchWelcome, root = true)
         clearCollectionRows()
         displayedArtist = null
         discovery = null
-        discoveryTrail.clear()
         results?.removeAllViews()
         heading("What are you in the mood for?")
         results?.addView(label("Search songs, artists, albums and playlists from YouTube Music.", 14f, secondary = true).apply {
@@ -206,6 +236,14 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // MainActivity owns drawer, active-tab and root-tab Back handling. Standalone browsers
+        // register a lifecycle-bound callback so offscreen pager fragments cannot intercept Back.
+        if (activity !is MainActivity) {
+            backCallback = object : OnBackPressedCallback(false) {
+                override fun handleOnBackPressed() { navigateBackIfPossible() }
+            }.also { requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, it) }
+        }
+        refreshBackHandling()
         PlayServiceModule.isPlayerReady.observe(viewLifecycleOwner) { ready ->
             if (ready == true && collectionRows.isNotEmpty()) observeCollectionPlayback()
         }
@@ -220,10 +258,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun home() {
+        beginScreen(BrowserScreen.Home, root = true)
         clearCollectionRows()
         displayedArtist = null
         discovery = null
-        discoveryTrail.clear()
         openedPlaylist = null
         results?.removeAllViews()
         val heroCover = artwork("", "Featured artwork", 100).apply { alpha = 0.9f }
@@ -373,25 +411,15 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun openDiscovery(destination: CloudDestination, next: String? = null) {
+        if (next == null) beginScreen(BrowserScreen.Discovery(destination))
         displayedArtist = null
         openedPlaylist = null
         if (next == null) {
             clearCollectionRows()
-            if (discovery != null && discovery != destination) discoveryTrail.add(discovery!!)
             discovery = destination
             results?.removeAllViews()
             nextButton = null
-            results?.addView(action(if (discoveryTrail.isEmpty()) "Back to browsing" else "Back") {
-                val parent = discoveryTrail.lastOrNull()
-                if (parent != null) {
-                    discoveryTrail.removeAt(discoveryTrail.lastIndex)
-                    discovery = parent
-                    openDiscovery(parent)
-                } else {
-                    discovery = null
-                    returnToBrowse()
-                }
-            })
+            results?.addView(action("Back") { returnToBrowse() })
             heading(destination.title)
             results?.addView(label(when (destination.id) {
                 "FEmusic_new_releases" -> "Fresh albums and songs, ready to explore."
@@ -440,9 +468,9 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     private fun search(next: String? = null) {
         if (query.isBlank()) return
+        if (next == null) beginScreen(BrowserScreen.Search(query, kind), root = true)
         displayedArtist = null
         discovery = null
-        discoveryTrail.clear()
         openedPlaylist = null
         request(clear = next == null) {
             when (kind) {
@@ -502,6 +530,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private fun artistRow(artist: CloudArtist) = row(artist.name, "Artist", artist.artwork) { artistTracks(artist) }
 
     private fun artistTracks(artist: CloudArtist, next: String? = null) {
+        if (next == null) beginScreen(BrowserScreen.Artist(artist))
         displayedArtist = artist
         openedPlaylist = null
         request(clear = next == null) {
@@ -624,6 +653,8 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
 
     private fun library() {
         if (!libraryOnly || results == null) return
+        beginScreen(openedPlaylist?.let { BrowserScreen.LocalPlaylist(it) } ?: BrowserScreen.Library,
+            root = openedPlaylist == null)
         loading?.cancel()
         clearCollectionRows()
         results?.removeAllViews()
@@ -631,7 +662,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             val playlist = CloudLibrary.playlists().find { it.id == openedPlaylist }
             if (playlist != null) {
                 val tracks = CloudLibrary.playlistTracks(playlist.id)
-                results?.addView(action("Back to library") { openedPlaylist = null; library() })
+                results?.addView(action("Back to library") { returnToBrowse() })
                 collectionHero(playlist.name, "Your library", "Playlist", tracks.firstOrNull()?.artwork.orEmpty(),
                     collectionSummary(tracks)) { localPlaylistMenu(playlist) }
                 collectionActions(playlist.name, tracks, local = true)
@@ -639,6 +670,8 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 return
             }
             openedPlaylist = null
+            library()
+            return
         }
         row("On this device", "Browse your local music", "") { CRouter.with(requireActivity()).url(RoutePath.LOCAL_SONG).start() }
         results?.addView(action("+ Create playlist") { editName("New playlist", "") { CloudLibrary.create(it) } })
@@ -708,12 +741,13 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun openPlaylist(item: CloudPlaylist) {
+        beginScreen(BrowserScreen.Playlist(item))
         val artistParent = displayedArtist
         openedPlaylist = null
         clearCollectionRows()
         results?.removeAllViews()
         results?.addView(action(if (artistParent != null) "Back to ${artistParent.name}" else "Back to browsing") {
-            if (artistParent != null) artistTracks(artistParent) else returnToBrowse()
+            returnToBrowse()
         })
         val summary = collectionHero(item.title, item.creator, if (item.isAlbum) "Album" else "Playlist", item.artwork,
             if (item.trackCount > 0) "${item.trackCount} songs · Loading duration…" else "Loading songs…") {
@@ -900,10 +934,119 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     }
 
     private fun returnToBrowse() {
-        discovery?.let { openDiscovery(it); return }
-        if (libraryOnly) library() else if (searchOnly && query.isNotBlank()) search()
+        if (navigateBackIfPossible()) return
+        if (libraryOnly) { openedPlaylist = null; library() } else if (searchOnly && query.isNotBlank()) search()
         else if (searchOnly) searchWelcome() else home()
     }
+
+    private fun beginScreen(screen: BrowserScreen, root: Boolean = false) {
+        if (restoringNavigation) { currentScreen = screen; return }
+        if (root) navigationHistory.clear()
+        else if (currentScreen != null && currentScreen != screen) {
+            val parent = currentScreen!!
+            val pending = activeLoad?.takeIf { loading?.isActive == true }
+            val children = results?.let { column -> (0 until column.childCount).mapNotNull { column.getChildAt(it) } }
+                .orEmpty().filterNot { it === pending?.indicator }
+            navigationHistory.add(BrowserSnapshot(
+                parent, children, browserScroll?.scrollY ?: 0,
+                (parent as? BrowserScreen.Search)?.query ?: query,
+                (parent as? BrowserScreen.Search)?.kind ?: kind,
+                nextButton, discovery, displayedArtist, collectionRows.toList(), CloudLibrary.revision.value,
+                pending,
+            ))
+            // Detached views keep paginated rows and scroll positions exact without retaining an
+            // unbounded stack of artwork. A normal category/artist/album path uses 2–4 snapshots.
+            if (navigationHistory.size > 12) navigationHistory.removeAt(0)
+        }
+        if (root || currentScreen != screen) {
+            loading?.cancel()
+            debounce?.cancel()
+            navigationRevision += 1
+            browserScroll?.scrollTo(0, 0)
+        }
+        currentScreen = screen
+        refreshBackHandling()
+    }
+
+    /** Called only for the selected tab by MainActivity, or by the standalone browser callback. */
+    fun navigateBackIfPossible(): Boolean {
+        val main = activity as? MainActivity
+        if (main != null && !main.isCloudTabActive(this)) return false
+        val snapshot = navigationHistory.lastOrNull() ?: run {
+            // If a very deep trail exceeded the bounded snapshot cache, return to this tab's
+            // root instead of allowing a detail page to close the app.
+            val root = currentScreen == null || currentScreen == BrowserScreen.Home ||
+                currentScreen == BrowserScreen.SearchWelcome || currentScreen is BrowserScreen.Search ||
+                currentScreen == BrowserScreen.Library
+            if (root) return false
+            if (libraryOnly) { openedPlaylist = null; library() }
+            else if (searchOnly && query.isNotBlank()) search()
+            else if (searchOnly) searchWelcome() else home()
+            return true
+        }
+        navigationHistory.removeAt(navigationHistory.lastIndex)
+        loading?.cancel()
+        debounce?.cancel()
+        clearCollectionRows()
+        val revision = ++navigationRevision
+        restoringNavigation = true
+        try {
+            currentScreen = snapshot.screen
+            query = snapshot.query
+            kind = snapshot.kind
+            discovery = snapshot.discovery
+            displayedArtist = snapshot.artist
+            openedPlaylist = (snapshot.screen as? BrowserScreen.LocalPlaylist)?.id
+            if (searchOnly && searchInput?.text?.toString() != query) searchInput?.setText(query)
+            updateChips()
+            val localChanged = (snapshot.screen is BrowserScreen.Library || snapshot.screen is BrowserScreen.LocalPlaylist) &&
+                snapshot.libraryRevision != CloudLibrary.revision.value
+            if (localChanged) {
+                renderScreen(snapshot.screen)
+            } else {
+                results?.removeAllViews()
+                snapshot.children.forEach { child ->
+                    (child.parent as? ViewGroup)?.removeView(child)
+                    results?.addView(child)
+                }
+                nextButton = snapshot.next
+                collectionRows.addAll(snapshot.rows)
+                if (collectionRows.isNotEmpty()) observeCollectionPlayback()
+                // Resume the original continuation if navigation interrupted a Load More request.
+                // Initial requests rebuild their own content; appended requests retain prior pages.
+                snapshot.pending?.let { request(it.clear, it.work) }
+            }
+            loading?.takeIf { it.isActive }?.invokeOnCompletion { error ->
+                if (error == null) browserScroll?.post {
+                    if (revision == navigationRevision) browserScroll?.scrollTo(0, snapshot.scrollY)
+                }
+            }
+            browserScroll?.doOnLayout { if (revision == navigationRevision) it.scrollTo(0, snapshot.scrollY) }
+        } finally {
+            restoringNavigation = false
+            refreshBackHandling()
+        }
+        return true
+    }
+
+    private fun renderScreen(screen: BrowserScreen) = when (screen) {
+        BrowserScreen.Home -> home()
+        BrowserScreen.SearchWelcome -> searchWelcome()
+        is BrowserScreen.Search -> { query = screen.query; kind = screen.kind; search() }
+        BrowserScreen.Library -> { openedPlaylist = null; library() }
+        is BrowserScreen.LocalPlaylist -> { openedPlaylist = screen.id; library() }
+        is BrowserScreen.Discovery -> openDiscovery(screen.destination)
+        is BrowserScreen.Artist -> artistTracks(screen.artist)
+        is BrowserScreen.Playlist -> openPlaylist(screen.playlist)
+    }
+
+    private fun refreshBackHandling() {
+        backCallback?.isEnabled = activity !is MainActivity && isVisible && isResumed && navigationHistory.isNotEmpty()
+    }
+
+    override fun onResume() { super.onResume(); refreshBackHandling() }
+    override fun onPause() { backCallback?.isEnabled = false; super.onPause() }
+    override fun onHiddenChanged(hidden: Boolean) { super.onHiddenChanged(hidden); refreshBackHandling() }
 
     private fun row(title: String, subtitle: String, artworkUrl: String, click: () -> Unit): LinearLayout {
         val line = LinearLayout(requireContext()).apply {
@@ -984,6 +1127,8 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             addView(label("Finding your music…", 14f, secondary = true).apply { setPadding(dp(12), 0, 0, 0) })
         }
         target.addView(indicator)
+        val pending = PendingLoad(clear, work, indicator)
+        activeLoad = pending
         loading = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 work()
@@ -1003,6 +1148,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 target.addView(error)
             } finally {
                 target.removeView(indicator)
+                if (activeLoad === pending) activeLoad = null
             }
         }
     }
@@ -1025,11 +1171,17 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         chips.clear()
         loading?.cancel()
         loading = null
+        activeLoad = null
         content = null
         results = null
         nextButton = null
         discovery = null
-        discoveryTrail.clear()
+        browserScroll = null
+        navigationHistory.clear()
+        currentScreen = null
+        backCallback?.remove()
+        backCallback = null
+        navigationRevision += 1
         displayedArtist = null
         playbackCollection = null
         super.onDestroyView()
