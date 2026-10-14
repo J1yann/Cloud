@@ -1,16 +1,14 @@
 package cloud.music.widget
 
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
-import androidx.core.text.buildSpannedString
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.C
+import cloud.music.utils.ImageUtils.loadCover
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -27,9 +25,6 @@ import me.wcy.router.CRouter
 import top.wangchenyan.common.CommonApp
 import top.wangchenyan.common.ext.findActivity
 import top.wangchenyan.common.ext.findLifecycleOwner
-import top.wangchenyan.common.ext.getColor
-import top.wangchenyan.common.ext.loadAvatar
-import top.wangchenyan.common.widget.CustomSpan.appendStyle
 
 /**
  * Created by wangchenyan.top on 2023/9/4.
@@ -42,18 +37,10 @@ class PlayBar @JvmOverloads constructor(
         CommonApp.app.playerController()
     }
     private var playerDataBound = false
-    private val rotateAnimator: ObjectAnimator
 
     init {
         id = R.id.play_bar
         viewBinding = LayoutPlayBarBinding.inflate(LayoutInflater.from(context), this, true)
-
-        rotateAnimator = ObjectAnimator.ofFloat(viewBinding.ivCover, "rotation", 0f, 360f).apply {
-            duration = 20000
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ObjectAnimator.RESTART
-            interpolator = LinearInterpolator()
-        }
 
         isVisible = false
         initView()
@@ -97,16 +84,15 @@ class PlayBar @JvmOverloads constructor(
             playerController.currentSong.collectLatest { currentSong ->
                 if (currentSong != null) {
                     isVisible = true
-                    viewBinding.ivCover.loadAvatar(currentSong.getSmallCover())
-                    viewBinding.tvTitle.text = buildSpannedString {
-                        append(currentSong.mediaMetadata.title)
-                        appendStyle(
-                            " - ${currentSong.mediaMetadata.artist}",
-                            color = getColor(R.color.common_text_h2_color)
-                        )
-                    }
-                    viewBinding.progressBar.max = currentSong.mediaMetadata.getDuration().toInt()
-                    viewBinding.progressBar.progress = playerController.playProgress.value.toInt()
+                    viewBinding.ivCover.loadCover(currentSong.getSmallCover(), (9 * resources.displayMetrics.density).toInt())
+                    viewBinding.tvTitle.text = currentSong.mediaMetadata.title
+                    viewBinding.tvArtist.text = currentSong.mediaMetadata.artist
+                    viewBinding.root.contentDescription = context.getString(
+                        R.string.mini_player_track,
+                        currentSong.mediaMetadata.title?.toString().orEmpty(),
+                        currentSong.mediaMetadata.artist?.toString().orEmpty(),
+                    )
+                    updateProgress(playerController.playProgress.value)
                 } else {
                     isVisible = false
                 }
@@ -135,24 +121,36 @@ class PlayBar @JvmOverloads constructor(
                     }
                 }
 
-                if (playState.isPlaying) {
-                    if (rotateAnimator.isPaused) {
-                        rotateAnimator.resume()
-                    } else if (rotateAnimator.isStarted.not()) {
-                        rotateAnimator.start()
+                viewBinding.ivPlay.isVisible = playState != PlayState.Preparing
+                viewBinding.flPlay.contentDescription = context.getString(
+                    when (playState) {
+                        PlayState.Preparing -> R.string.mini_player_buffering
+                        PlayState.Playing -> R.string.player_pause
+                        else -> R.string.player_play
                     }
-                } else {
-                    if (rotateAnimator.isRunning) {
-                        rotateAnimator.pause()
-                    }
-                }
+                )
+                updateProgress(playerController.playProgress.value)
             }
         }
 
         lifecycleOwner.lifecycleScope.launch {
             playerController.playProgress.collectLatest {
-                viewBinding.progressBar.progress = it.toInt()
+                updateProgress(it)
             }
         }
     }
+    private fun updateProgress(positionMs: Long) {
+        val song = playerController.currentSong.value ?: return
+        val metadataDuration = song.mediaMetadata.getDuration()
+        val duration = if (metadataDuration > 0 && metadataDuration != C.TIME_UNSET) metadataDuration else {
+            val controller = playerController.mediaController
+            if (controller.currentMediaItem?.mediaId == song.mediaId) {
+                controller.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: 0L
+            } else 0L
+        }
+        val max = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        viewBinding.progressBar.max = max.coerceAtLeast(1)
+        viewBinding.progressBar.progress = if (max > 0) positionMs.coerceIn(0L, max.toLong()).toInt() else 0
+    }
+
 }

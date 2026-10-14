@@ -2,97 +2,137 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/play_bar_height"
-    android:background="?attr/cloudPlayerBarColor"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
+    android:layout_height="wrap_content"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_cloud_mini_card"
+    android:foreground="@drawable/bg_cloud_mini_ripple"
+    android:orientation="vertical"
+    android:clickable="true"
+    android:focusable="true"
+    android:contentDescription="@string/mini_player_open">
 
-    <com.hjq.shape.layout.ShapeFrameLayout
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="16dp"
-        android:padding="6dp"
-        app:shape_radius="100dp"
-        app:shape_solidColor="@color/black">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="68dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <ImageView
             android:id="@+id/ivCover"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:contentDescription="@null"
-            android:scaleType="fitXY"
-            android:src="@drawable/common_bg_image_placeholder_round" />
-    </com.hjq.shape.layout.ShapeFrameLayout>
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_cloud_mini_cover"
+            android:outlineProvider="background"
+            android:clipToOutline="true"
+            android:scaleType="centerCrop"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_default_cover" />
 
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:text="@string/no_playing_song"
-            android:textColor="?attr/cloudTextPrimary"
-            android:textSize="15dp" />
-    </LinearLayout>
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical">
 
-    <FrameLayout
-        android:id="@+id/flPlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="@string/no_playing_song"
+                android:textColor="?attr/cloudTextPrimary"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium" />
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:progress="75"
-            app:indicatorColor="?attr/cloudTextPrimary"
-            app:indicatorSize="28dp"
-            app:trackColor="?attr/cloudDividerColor"
-            app:trackCornerRadius="1dp"
-            app:trackThickness="2dp" />
+            <TextView
+                android:id="@+id/tvArtist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="?attr/cloudTextSecondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/flPlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_play_pause"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivPlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_player_play_pause"
+                app:tint="?attr/cloudTextPrimary" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/loadingProgress"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:visibility="gone"
+                android:importantForAccessibility="no"
+                app:indicatorColor="?attr/cloudAccentColor"
+                app:indicatorSize="28dp"
+                app:trackThickness="2dp" />
+        </FrameLayout>
 
         <ImageView
-            android:id="@+id/ivPlay"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_gravity="center"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_play_bar_play_pause_selector"
+            android:id="@+id/ivNext"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_next"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_next"
             app:tint="?attr/cloudTextPrimary" />
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/loadingProgress"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_gravity="center"
-            android:indeterminate="true"
-            app:indicatorColor="@color/common_theme_color"
-            app:indicatorSize="22dp"
-            app:trackThickness="1.5dp" />
-    </FrameLayout>
+        <ImageView
+            android:id="@+id/ivPlaylist"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/player_queue"
+            android:clickable="true"
+            android:focusable="true"
+            android:src="@drawable/ic_playlist"
+            app:tint="?attr/cloudTextPrimary" />
+    </LinearLayout>
 
-    <ImageView
-        android:id="@+id/ivNext"
-        android:layout_width="40dp"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:padding="10dp"
-        android:src="@drawable/ic_next"
-        app:tint="?attr/cloudTextPrimary" />
-
-    <ImageView
-        android:id="@+id/ivPlaylist"
-        android:layout_width="40dp"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:padding="10dp"
-        android:src="@drawable/ic_playlist"
-        app:tint="?attr/cloudTextPrimary" />
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginBottom="6dp"
+        android:minHeight="3dp"
+        android:maxHeight="3dp"
+        android:indeterminate="false"
+        android:progressDrawable="@drawable/bg_cloud_mini_progress"
+        android:importantForAccessibility="no" />
 </LinearLayout>

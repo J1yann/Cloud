@@ -1,0 +1,5 @@
+<resources>
+    <string name="mini_player_open">Open full player</string>
+    <string name="mini_player_track">%1$s · %2$s. Open full player</string>
+    <string name="mini_player_buffering">Loading track</string>
+</resources>
