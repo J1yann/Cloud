@@ -2,6 +2,8 @@ package cloud.music.main.playing
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.GradientDrawable
+import androidx.core.graphics.ColorUtils
 import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
@@ -87,6 +89,7 @@ class PlayingActivity : BaseMusicActivity() {
 
     private val defaultBgBitmap by defaultBgBitmapDelegate
 
+    private var artworkTintJob: Job? = null
     private var loadLrcJob: Job? = null
     private var lyricsDurationMs = 0L
     private val durationListener = object : Player.Listener {
@@ -296,6 +299,7 @@ class PlayingActivity : BaseMusicActivity() {
     }
 
     private fun updateCover(song: MediaItem) {
+        artworkTintJob?.cancel()
         setDefaultCover()
         val original = song.getLargeCover()
         val host = runCatching { Uri.parse(original).host }.getOrNull().orEmpty()
@@ -319,16 +323,58 @@ class PlayingActivity : BaseMusicActivity() {
                         return@loadBitmap
                     }
                     viewBinding.albumCoverView.setImageBitmap(bitmap)
-                    if (!isAmoled) Blurry.with(this).sampling(8).radius(22).from(bitmap).into(viewBinding.ivPlayingBg)
+                    if (isAmoled) updateArtworkTint(bitmap, song.mediaId)
+                    else Blurry.with(this).sampling(8).radius(22).from(bitmap).into(viewBinding.ivPlayingBg)
                 } else if (fallback && url != original) load(original, false)
             }
         }
         if (original.isNotBlank()) load(large, true)
     }
 
+    private fun updateArtworkTint(bitmap: Bitmap, mediaId: String) {
+        artworkTintJob?.cancel()
+        artworkTintJob = lifecycleScope.launch {
+            val tint = withContext(Dispatchers.Default) {
+                runCatching {
+                    val sample = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE)
+                        bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
+                    if (sample == null) return@runCatching Color.BLACK
+                    try {
+                        var red = 0.0
+                        var green = 0.0
+                        var blue = 0.0
+                        var total = 0.0
+                        val hsv = FloatArray(3)
+                        for (y in 0 until 16) for (x in 0 until 16) {
+                            val color = sample.getPixel(x * sample.width / 16, y * sample.height / 16)
+                            Color.colorToHSV(color, hsv)
+                            val weight = (0.15 + hsv[1]) * hsv[2] * Color.alpha(color) / 255.0
+                            red += Color.red(color) * weight
+                            green += Color.green(color) * weight
+                            blue += Color.blue(color) * weight
+                            total += weight
+                        }
+                        if (total > 0) Color.rgb((red / total).toInt(), (green / total).toInt(), (blue / total).toInt())
+                        else Color.BLACK
+                    } finally {
+                        if (sample !== bitmap) sample.recycle()
+                    }
+                }.getOrDefault(Color.BLACK)
+            }
+            if (!isDestroyed && !isFinishing && isAmoled && playerController.currentSong.value?.mediaId == mediaId) {
+                viewBinding.flBackground.background = GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(ColorUtils.blendARGB(Color.BLACK, tint, 0.18f),
+                        ColorUtils.blendARGB(Color.BLACK, tint, 0.05f), Color.BLACK)
+                )
+            }
+        }
+    }
+
     private fun setDefaultCover() {
         viewBinding.albumCoverView.setImageBitmap(defaultCoverBitmap)
-        if (!isAmoled) viewBinding.ivPlayingBg.setImageBitmap(defaultBgBitmap)
+        if (isAmoled) viewBinding.flBackground.setBackgroundColor(Color.BLACK)
+        else viewBinding.ivPlayingBg.setImageBitmap(defaultBgBitmap)
     }
 
     private fun updateLrc(song: MediaItem) {
@@ -481,6 +527,7 @@ class PlayingActivity : BaseMusicActivity() {
     }
 
     override fun onDestroy() {
+        artworkTintJob?.cancel()
         loadLrcJob?.cancel()
         playerController.mediaController.removeListener(durationListener)
         super.onDestroy()
