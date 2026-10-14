@@ -3,9 +3,9 @@ package cloud.music.service
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.AudioAttributes
-import androidx.media3.datasource.ResolvingDataSource
-import cloud.music.playback.YouTubePlayback
+import cloud.music.playback.RetryingYouTubeDataSource
 import cloud.music.playback.NewPipeDownloader
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.common.Player
@@ -38,12 +38,16 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(
                 DefaultMediaSourceFactory(applicationContext)
-                    .setDataSourceFactory(ResolvingDataSource.Factory(
+                    .setDataSourceFactory(RetryingYouTubeDataSource.Factory(
                         MusicDataSource.Factory(applicationContext,
-                            DefaultHttpDataSource.Factory().setUserAgent(NewPipeDownloader.USER_AGENT)),
-                        ResolvingDataSource.Resolver { spec -> YouTubePlayback.resolve(spec) }
+                            DefaultHttpDataSource.Factory().setUserAgent(NewPipeDownloader.USER_AGENT))
                     ))
             )
+            .build()
+
+        // Combined YouTube streams are an audio fallback; do not decode their video track.
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
             .build()
 
         session = MediaSession.Builder(this, player)
