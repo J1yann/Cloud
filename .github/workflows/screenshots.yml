@@ -1,0 +1,81 @@
+name: Capture Cloud screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release to capture
+        required: true
+        default: v0.2.3
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloud-screenshots-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUD_RELEASE_TAG: ${{ inputs.tag }}
+      CLOUD_SCREENSHOT_DIR: ${{ runner.temp }}/cloud-screenshots
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download production APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CLOUD_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          mkdir -p "$RUNNER_TEMP/cloud-apk"
+          gh release download "$CLOUD_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --pattern '*.apk.sha256' --dir "$RUNNER_TEMP/cloud-apk"
+          cd "$RUNNER_TEMP/cloud-apk"
+          sha256sum -c ./*.apk.sha256
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
+
+      - name: Cache emulator packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/emulator
+            ${{ env.ANDROID_HOME }}/system-images/android-35/google_apis/x86_64
+          key: cloud-screenshots-emulator-v1-${{ runner.os }}-35-google-apis-x86_64
+
+      - name: Enable emulator acceleration
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture app screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 .github/scripts/capture_screenshots.py
+
+      - name: Attach screenshots to release
+        if: ${{ always() && !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$CLOUD_SCREENSHOT_DIR/01-home.png"
+          archive="$RUNNER_TEMP/cloud-screenshots-$CLOUD_RELEASE_TAG.zip"
+          cd "$CLOUD_SCREENSHOT_DIR"
+          zip -q -r "$archive" .
+          gh release upload "$CLOUD_RELEASE_TAG" "$archive" --repo "$GITHUB_REPOSITORY" --clobber
+          printf 'Screenshots: [download ZIP](https://github.com/%s/releases/download/%s/cloud-screenshots-%s.zip)\n' "$GITHUB_REPOSITORY" "$CLOUD_RELEASE_TAG" "$CLOUD_RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
