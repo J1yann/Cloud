@@ -9,7 +9,7 @@ on:
         default: v0.2.3
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cloud-screenshots-${{ inputs.tag }}
@@ -22,7 +22,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       CLOUD_RELEASE_TAG: ${{ inputs.tag }}
-      CLOUD_SCREENSHOT_DIR: ${{ runner.temp }}/cloud-screenshots
+      CLOUD_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
     steps:
       - uses: actions/checkout@v6
 
@@ -68,14 +68,11 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: python3 .github/scripts/capture_screenshots.py
 
-      - name: Attach screenshots to release
+      - name: Upload screenshot ZIP
         if: ${{ always() && !cancelled() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f "$CLOUD_SCREENSHOT_DIR/01-home.png"
-          archive="$RUNNER_TEMP/cloud-screenshots-$CLOUD_RELEASE_TAG.zip"
-          cd "$CLOUD_SCREENSHOT_DIR"
-          zip -q -r "$archive" .
-          gh release upload "$CLOUD_RELEASE_TAG" "$archive" --repo "$GITHUB_REPOSITORY" --clobber
-          printf 'Screenshots: [download ZIP](https://github.com/%s/releases/download/%s/cloud-screenshots-%s.zip)\n' "$GITHUB_REPOSITORY" "$CLOUD_RELEASE_TAG" "$CLOUD_RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-screenshots-${{ inputs.tag }}
+          path: screenshots/
+          if-no-files-found: error
+          retention-days: 7
