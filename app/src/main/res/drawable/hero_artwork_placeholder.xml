@@ -1,0 +1,9 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#22485C" android:centerColor="#183544" android:endColor="#10212E" />
+        </shape>
+    </item>
+    <item android:width="104dp" android:height="104dp" android:top="44dp" android:gravity="top|center_horizontal"
+        android:drawable="@drawable/hero_loading_mark" />
+</layer-list>

@@ -19,6 +19,8 @@ import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import cloud.music.R
 import top.wangchenyan.common.ext.load
 
@@ -124,7 +126,7 @@ class CloudFeaturedHero(
         dots.removeAllViews()
         val featured = tracks.filter { it.allowsPlayback && it.artwork.isNotBlank() }.distinctBy { it.id }.take(4)
         if (featured.isEmpty()) addCard(null) else featured.forEach(::addCard)
-        dots.visibility = if (rail.childCount > 1) View.VISIBLE else View.GONE
+        dots.visibility = if (rail.childCount > 1) View.VISIBLE else View.INVISIBLE
         repeat(rail.childCount) { index ->
             dots.addView(View(context).apply {
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -147,14 +149,19 @@ class CloudFeaturedHero(
             clipToOutline = true
         }
         val visual = FrameLayout(context).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0xff244e64.toInt(), 0xff132532.toInt(), 0xff10212e.toInt()))
+            setBackgroundResource(R.drawable.hero_artwork_placeholder)
         }
         if (track != null) {
             visual.addView(ImageView(context).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                load(track.artwork)
+                Glide.with(this)
+                    .load(track.artwork)
+                    .centerCrop()
+                    .placeholder(R.drawable.hero_artwork_placeholder)
+                    .error(R.drawable.hero_artwork_placeholder)
+                    .transition(DrawableTransitionOptions.withCrossFade(350))
+                    .into(this)
             }, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         }
         visual.addView(View(context).apply {
@@ -185,7 +192,10 @@ class CloudFeaturedHero(
         val panel = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            setBackgroundColor(0xff10212e.toInt())
+            background = rounded(0xff10212e.toInt(), 24).apply {
+                val radius = dp(24).toFloat()
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, radius, radius, radius, radius)
+            }
         }
         panel.addView(ImageView(context).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
