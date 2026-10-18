@@ -6,6 +6,7 @@
   <a href="https://github.com/J1yann/Cloud/actions/workflows/android.yml"><img src="https://github.com/J1yann/Cloud/actions/workflows/android.yml/badge.svg" alt="Android build" /></a>
   <img src="https://img.shields.io/badge/Android-6.0%2B-346E8B?style=flat" alt="Android 6.0 and newer" />
   <a href="https://github.com/J1yann/Cloud/releases/latest"><img src="https://img.shields.io/github/v/release/J1yann/Cloud?color=346E8B" alt="Latest release" /></a>
+  <a href="https://github.com/J1yann/Cloud/releases"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FJ1yann%2FCloud%2Fmain%2Fdocs%2Fdownloads.json" alt="APK downloads across published releases" /></a>
 </p>
 
 <p align="center">Listen to YouTube Music without signing in. Discover songs, build playlists, and keep listening with Cloud.</p>
