@@ -6,13 +6,13 @@
     <PreferenceCategory android:title="YOUR EXPERIENCE" android:layout="@layout/settings_preference_category">
         <ListPreference
             android:layout="@layout/settings_preference_row"
-            android:defaultValue="0"
+            android:defaultValue="3"
             android:icon="@drawable/ic_menu_settings"
             android:dialogTitle="Appearance"
             android:entries="@array/dark_mode_entries"
             android:entryValues="@array/dark_mode_values"
             android:key="@string/setting_key_dark_mode"
-            android:summary="System default"
+            android:summary="AMOLED black"
             android:title="Appearance" />
     </PreferenceCategory>
 

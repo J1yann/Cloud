@@ -37,7 +37,7 @@ object ConfigPreferences :
 
     var darkMode by IPreferencesFile.StringProperty(
         "dark_mode",
-        DarkModeService.DarkMode.Auto.value
+        DarkModeService.DarkMode.Amoled.value
     )
 
     var playMode: Int by IPreferencesFile.IntProperty("play_mode", 3)
