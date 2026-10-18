@@ -158,8 +158,10 @@ class CloudFeaturedHero(
                 Glide.with(this)
                     .load(track.artwork)
                     .centerCrop()
-                    .placeholder(R.drawable.hero_artwork_placeholder)
-                    .error(R.drawable.hero_artwork_placeholder)
+                    // Keep the fixed-size motif on the container; CENTER_CROP must
+                    // never enlarge it like album artwork while a request is pending.
+                    .placeholder(android.R.color.transparent)
+                    .error(android.R.color.transparent)
                     .transition(DrawableTransitionOptions.withCrossFade(350))
                     .into(this)
             }, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
