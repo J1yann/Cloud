@@ -114,10 +114,14 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         val column = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(color(R.color.common_background_color))
-            setPadding(dp(20), dp(8), dp(20), 0)
+            val inset = if (searchOnly || libraryOnly) dp(20) else 0
+            setPadding(inset, dp(8), inset, 0)
         }
         content = column
-        val header = LinearLayout(requireContext()).apply { gravity = Gravity.CENTER_VERTICAL }
+        val header = LinearLayout(requireContext()).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            if (!searchOnly && !libraryOnly) setPadding(dp(20), 0, dp(20), 0)
+        }
         header.addView(label(if (libraryOnly) "Your library" else if (searchOnly) "Search" else "Cloud", 28f, true),
             LinearLayout.LayoutParams(0, dp(56), 1f))
         header.addView(icon(R.drawable.ic_menu_settings, "Settings") {
@@ -128,7 +132,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             libraryOnly -> "Your music, always within reach"
             searchOnly -> "Find your next favorite"
             else -> "A little discovery. A lot of music."
-        }, 13f, secondary = true).apply { setPadding(0, 0, 0, dp(20)) })
+        }, 13f, secondary = true).apply {
+            val inset = if (searchOnly || libraryOnly) 0 else dp(20)
+            setPadding(inset, 0, inset, dp(20))
+        })
         val input = EditText(requireContext()).apply {
             hint = getString(R.string.search_input_hint)
             textSize = 16f
@@ -214,6 +221,21 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         results = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(24))
+            if (!searchOnly && !libraryOnly) {
+                // Keep the scrolling viewport full width, including touch targets at its edges.
+                // Apply reading gutters to ordinary sections rather than shrinking the hero.
+                setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
+                    override fun onChildViewAdded(parent: View?, child: View?) {
+                        if (child == null) return
+                        val params = child.layoutParams as? LinearLayout.LayoutParams ?: return
+                        val inset = if (child is CloudFeaturedHero) 0 else dp(20)
+                        params.marginStart = inset
+                        params.marginEnd = inset
+                        child.layoutParams = params
+                    }
+                    override fun onChildViewRemoved(parent: View?, child: View?) = Unit
+                })
+            }
         }
         scroll.addView(results)
         column.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))

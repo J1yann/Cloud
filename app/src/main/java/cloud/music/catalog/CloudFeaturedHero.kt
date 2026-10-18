@@ -140,7 +140,10 @@ class CloudFeaturedHero(
     private fun addCard(track: CloudTrack?) {
         val card = LinearLayout(context).apply {
             orientation = VERTICAL
-            background = rounded(0xff10212e.toInt(), 24)
+            background = rounded(0xff10212e.toInt(), 24).apply {
+                val radius = dp(24).toFloat()
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, radius, radius, radius, radius)
+            }
             clipToOutline = true
         }
         val visual = FrameLayout(context).apply {
@@ -217,9 +220,7 @@ class CloudFeaturedHero(
             setOnClickListener { if (track == null) onDiscover() else onPlay(track) }
         }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         card.addView(panel)
-        rail.addView(card, LayoutParams(if (pageWidth > 0) pageWidth - dp(12) else dp(300), LayoutParams.WRAP_CONTENT).apply {
-            marginEnd = dp(12)
-        })
+        rail.addView(card, LayoutParams(if (pageWidth > 0) pageWidth else dp(300), LayoutParams.WRAP_CONTENT))
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -233,8 +234,8 @@ class CloudFeaturedHero(
         for (index in 0 until rail.childCount) {
             val card = rail.getChildAt(index)
             card.layoutParams = (card.layoutParams as LayoutParams).apply {
-                width = if (rail.childCount == 1) viewport else viewport - dp(12)
-                marginEnd = if (rail.childCount == 1) 0 else dp(12)
+                width = viewport
+                marginEnd = 0
             }
         }
         pager.post { pager.scrollTo(currentPage * pageWidth, 0) }
