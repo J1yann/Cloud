@@ -33,6 +33,12 @@ object CloudLibrary {
         if (value.isBlank()) return
         preferences.edit().putString("search_history", gson.toJson((listOf(value) + searchHistory().filter { it != value }).take(20))).apply()
     }
+    fun removeSearch(query: String) {
+        preferences.edit().putString("search_history", gson.toJson(searchHistory().filterNot { it == query })).apply()
+    }
+    fun clearSearchHistory() {
+        preferences.edit().remove("search_history").apply()
+    }
     @Synchronized fun remember(track: CloudTrack) { state.tracks[track.id] = track; save() }
     @Synchronized fun track(id: String): CloudTrack? = state.tracks[id]
     @Synchronized fun played(id: String) {

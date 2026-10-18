@@ -1,0 +1,12 @@
+<resources>
+    <string name="search_input_hint">Songs, artists, albums…</string>
+    <string name="search_submit">Search music</string>
+    <string name="search_clear_input">Clear search</string>
+    <string name="search_filter_label">Filter search results</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_clear_history">Clear all</string>
+    <string name="search_remove_term">Remove %1$s from recent searches</string>
+    <string name="search_empty_title">What sounds good today?</string>
+    <string name="search_empty_description">Find a song you love, an artist to explore, or a playlist to get lost in.</string>
+    <string name="search_browse">Explore music</string>
+</resources>

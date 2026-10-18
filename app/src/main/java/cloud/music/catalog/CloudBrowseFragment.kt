@@ -67,6 +67,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
     private var debounce: Job? = null
     private var searchInput: EditText? = null
     private val chips = mutableListOf<TextView>()
+    private var searchFilters: HorizontalScrollView? = null
     private var query = ""
     private var kind = 0
     private var discovery: CloudDestination? = null
@@ -129,24 +130,42 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             else -> "A little discovery. A lot of music."
         }, 13f, secondary = true).apply { setPadding(0, 0, 0, dp(20)) })
         val input = EditText(requireContext()).apply {
-            hint = getString(R.string.cloud_search_hint)
-            textSize = 15f
+            hint = getString(R.string.search_input_hint)
+            textSize = 16f
             setTextColor(color(R.color.common_text_h1_color))
             setHintTextColor(color(R.color.common_text_h2_color))
             background = null
             isSingleLine = true
             imeOptions = EditorInfo.IME_ACTION_SEARCH
-            setPadding(dp(16), 0, 0, 0)
+            setPadding(0, 0, dp(4), 0)
         }
         searchInput = if (searchOnly) input else null
         if (searchOnly) {
             val searchBar = LinearLayout(requireContext()).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                background = surface(color(R.color.card_bg), 16)
+                background = surface(color(R.color.card_bg), 20).apply {
+                    setStroke(dp(1), color(R.color.common_divider))
+                }
+                setPadding(dp(4), dp(4), dp(4), dp(4))
             }
-            searchBar.addView(input, LinearLayout.LayoutParams(0, dp(52), 1f))
-            searchBar.addView(icon(R.drawable.ic_menu_search, "Search") { submitSearch() },
-                LinearLayout.LayoutParams(dp(52), dp(52)))
+            searchBar.addView(icon(R.drawable.ic_menu_search, getString(R.string.search_submit)) {
+                if (input.text.isNullOrBlank()) {
+                    input.requestFocus()
+                    (requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager)
+                        ?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+                } else submitSearch()
+            }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            searchBar.addView(input, LinearLayout.LayoutParams(0, dp(48), 1f))
+            val clear = icon(R.drawable.ic_close, getString(R.string.search_clear_input)) {
+                input.text?.clear()
+                input.requestFocus()
+            }.apply { visibility = View.INVISIBLE }
+            searchBar.addView(clear, LinearLayout.LayoutParams(dp(48), dp(48)))
+            input.setOnFocusChangeListener { _, focused ->
+                searchBar.background = surface(color(R.color.card_bg), 20).apply {
+                    setStroke(dp(1), color(if (focused) R.color.common_theme_color else R.color.common_divider))
+                }
+            }
             column.addView(searchBar)
             val controls = LinearLayout(requireContext()).apply { setPadding(0, dp(14), 0, dp(14)) }
             chips.clear()
@@ -159,17 +178,20 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                     if (index > 0) marginStart = dp(8)
                 })
             }
-            column.addView(HorizontalScrollView(requireContext()).apply {
+            searchFilters = HorizontalScrollView(requireContext()).apply {
                 isHorizontalScrollBarEnabled = false
                 isVerticalScrollBarEnabled = false
+                visibility = View.GONE
+                contentDescription = getString(R.string.search_filter_label)
                 addView(controls)
-            })
+            }.also { column.addView(it) }
             input.setOnEditorActionListener { _, action, event ->
                 if (action == EditorInfo.IME_ACTION_SEARCH || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event?.action == KeyEvent.ACTION_UP)) {
                     submitSearch(); true
                 } else false
             }
             input.doAfterTextChanged {
+                clear.visibility = if (it.isNullOrEmpty()) View.INVISIBLE else View.VISIBLE
                 if (restoringNavigation) return@doAfterTextChanged
                 debounce?.cancel()
                 val value = it?.toString()?.trim().orEmpty()
@@ -209,6 +231,10 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         search()
     }
 
+    private fun refreshSearchFilters() {
+        searchFilters?.visibility = if (currentScreen is BrowserScreen.Search) View.VISIBLE else View.GONE
+    }
+
     private fun updateChips() = chips.forEachIndexed { index, chip ->
         chip.background = surface(color(if (index == kind) R.color.common_theme_color else R.color.card_bg), 20)
         chip.setTextColor(color(if (index == kind) android.R.color.white else R.color.common_text_h1_color))
@@ -220,17 +246,59 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         displayedArtist = null
         discovery = null
         results?.removeAllViews()
-        heading("What are you in the mood for?")
-        results?.addView(label("Search songs, artists, albums and playlists from YouTube Music.", 14f, secondary = true).apply {
-            setPadding(0, 0, 0, dp(24))
-        })
-        if (CloudLibrary.searchHistory().isNotEmpty()) {
-            heading("Recent searches")
-            CloudLibrary.searchHistory().take(5).forEach { term ->
-                results?.addView(action(term) { searchInput?.setText(term); submitSearch() })
+        kind = 0
+        updateChips()
+        val history = CloudLibrary.searchHistory().take(8)
+        if (history.isNotEmpty()) {
+            val title = LinearLayout(requireContext()).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(20), 0, dp(8))
+                addView(label(getString(R.string.search_recent), 20f, true),
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(action(getString(R.string.search_clear_history)) {
+                    CloudLibrary.clearSearchHistory()
+                    searchWelcome()
+                }.apply {
+                    textSize = 12f
+                    background = null
+                    setTextColor(color(R.color.common_text_h2_color))
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)))
             }
+            results?.addView(title)
+            history.forEach { term ->
+                val line = LinearLayout(requireContext()).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = ripple(color(android.R.color.transparent), 14)
+                    minimumHeight = dp(60)
+                    setOnClickListener { searchInput?.setText(term); submitSearch() }
+                }
+                line.addView(ImageView(requireContext()).apply {
+                    setImageResource(R.drawable.ic_menu_timer)
+                    imageTintList = ColorStateList.valueOf(color(R.color.common_text_h2_color))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
+                }, LinearLayout.LayoutParams(dp(44), dp(44)))
+                line.addView(label(term, 15f).apply {
+                    maxLines = 1
+                    setPadding(dp(8), 0, dp(8), 0)
+                }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                line.addView(icon(R.drawable.ic_close, getString(R.string.search_remove_term, term)) {
+                    CloudLibrary.removeSearch(term)
+                    searchWelcome()
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                results?.addView(line)
+            }
+        } else {
+            results?.addView(LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(28), 0, dp(8))
+                addView(label(getString(R.string.search_empty_title), 22f, true))
+                addView(label(getString(R.string.search_empty_description), 14f, secondary = true).apply {
+                    setPadding(0, dp(10), 0, dp(8))
+                })
+            })
         }
-        heading("Browse something new")
+        heading(getString(R.string.search_browse))
         discoveryNavigation()
     }
 
@@ -941,6 +1009,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
             browserScroll?.scrollTo(0, 0)
         }
         currentScreen = screen
+        refreshSearchFilters()
         refreshBackHandling()
     }
 
@@ -965,6 +1034,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         restoringNavigation = true
         try {
             currentScreen = snapshot.screen
+            refreshSearchFilters()
             query = snapshot.query
             kind = snapshot.kind
             discovery = snapshot.discovery
@@ -1145,6 +1215,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         debounce?.cancel()
         debounce = null
         searchInput = null
+        searchFilters = null
         query = ""
         chips.clear()
         loading?.cancel()
