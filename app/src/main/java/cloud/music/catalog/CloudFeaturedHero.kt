@@ -1,5 +1,11 @@
 package cloud.music.catalog
 
+import android.animation.ValueAnimator
+import android.os.Build
+import android.graphics.Rect
+import android.view.MotionEvent
+import android.view.accessibility.AccessibilityManager
+import android.view.animation.DecelerateInterpolator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -23,7 +29,21 @@ class CloudFeaturedHero(
     private val onPlay: (CloudTrack) -> Unit,
 ) : LinearLayout(context) {
     private val rail = LinearLayout(context).apply { orientation = HORIZONTAL }
-    private val pager = HorizontalScrollView(context).apply {
+    private val pager = object : HorizontalScrollView(context) {
+        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    interacting = true
+                    stopAutoSlide()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    interacting = false
+                    scheduleAutoSlide()
+                }
+            }
+            return super.dispatchTouchEvent(event)
+        }
+    }.apply {
         isHorizontalScrollBarEnabled = false
         isVerticalScrollBarEnabled = false
         overScrollMode = View.OVER_SCROLL_NEVER
@@ -33,6 +53,60 @@ class CloudFeaturedHero(
     private val dots = LinearLayout(context).apply { gravity = Gravity.CENTER }
     private var pageWidth = 0
     private var currentPage = 0
+
+    private var interacting = false
+    private var slideAnimation: ValueAnimator? = null
+    private val visibleBounds = Rect()
+    private val advanceSlide = object : Runnable {
+        override fun run() {
+            val accessibility = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+            val animationsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                ValueAnimator.areAnimatorsEnabled()
+            else android.provider.Settings.Global.getFloat(context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
+            if (!interacting && animationsEnabled && accessibility?.isTouchExplorationEnabled != true &&
+                isShown && getGlobalVisibleRect(visibleBounds) && pageWidth > 0 && rail.childCount > 1) {
+                val next = (currentPage + 1) % rail.childCount
+                slideAnimation?.cancel()
+                slideAnimation = ValueAnimator.ofInt(pager.scrollX, next * pageWidth).apply {
+                    duration = 650L
+                    interpolator = DecelerateInterpolator(2f)
+                    addUpdateListener { pager.scrollTo(it.animatedValue as Int, 0) }
+                    start()
+                }
+            }
+            scheduleAutoSlide()
+        }
+    }
+
+    private fun scheduleAutoSlide() {
+        removeCallbacks(advanceSlide)
+        if (isAttachedToWindow && windowVisibility == View.VISIBLE && !interacting && rail.childCount > 1) {
+            postDelayed(advanceSlide, 5_000L)
+        }
+    }
+
+    private fun stopAutoSlide() {
+        removeCallbacks(advanceSlide)
+        slideAnimation?.cancel()
+        slideAnimation = null
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        scheduleAutoSlide()
+    }
+
+    override fun onDetachedFromWindow() {
+        stopAutoSlide()
+        interacting = false
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == View.VISIBLE) scheduleAutoSlide() else stopAutoSlide()
+    }
 
     init {
         orientation = VERTICAL
@@ -45,6 +119,7 @@ class CloudFeaturedHero(
     }
 
     fun submit(tracks: List<CloudTrack>) {
+        stopAutoSlide()
         rail.removeAllViews()
         dots.removeAllViews()
         val featured = tracks.filter { it.allowsPlayback && it.artwork.isNotBlank() }.distinctBy { it.id }.take(4)
@@ -59,6 +134,7 @@ class CloudFeaturedHero(
         currentPage = 0
         pager.scrollTo(0, 0)
         resizeCards(width)
+        scheduleAutoSlide()
     }
 
     private fun addCard(track: CloudTrack?) {
