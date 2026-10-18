@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-${{ github.workflow }}-${{ github.ref }}
@@ -70,3 +70,27 @@ jobs:
         shell: bash
         run: bash ./gradlew :app:assembleDebug --build-cache --stacktrace
 
+
+      - name: Publish private debug APK
+        if: github.repository == 'J1yann/cloud-staging' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$apk"
+          cp "$apk" "$RUNNER_TEMP/cloud-preview.apk"
+          cd "$RUNNER_TEMP"
+          sha256sum cloud-preview.apk > cloud-preview.apk.sha256
+          cat > preview-notes.md <<EOF_NOTES
+          Private debug APK for manual device testing.
+
+          Installs as **Cloud Preview** (cloud.music.debug) alongside the public app, with a separate library.
+
+          Commit: [$GITHUB_SHA](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)
+          [Build details](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          EOF_NOTES
+          gh release create "debug-$GITHUB_RUN_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Cloud Preview · Build $GITHUB_RUN_NUMBER" \
+            --notes-file preview-notes.md cloud-preview.apk cloud-preview.apk.sha256
