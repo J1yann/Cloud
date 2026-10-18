@@ -264,33 +264,11 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
         discovery = null
         openedPlaylist = null
         results?.removeAllViews()
-        val heroCover = artwork("", "Featured artwork", 100).apply { alpha = 0.9f }
-        val hero = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(color(R.color.cloud_hero_start), color(R.color.cloud_hero_end))).apply {
-                cornerRadius = dp(22).toFloat()
-            }
-            setPadding(dp(22), dp(24), dp(18), dp(24))
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(0, 0, dp(12), 0)
-                addView(label("DISCOVER SOMETHING NEW", 10f, true).apply { setTextColor(0xffbde3f4.toInt()); letterSpacing = 0.10f })
-                addView(label("Find your\nnext favorite.", 25f, true).apply {
-                    setTextColor(color(android.R.color.white)); setPadding(0, dp(10), 0, dp(8))
-                })
-                addView(label("Fresh sounds. Hidden gems.", 13f).apply { setTextColor(0xffe2edf6.toInt()) })
-                addView(action("Find music") {
-                    val main = activity as? MainActivity
-                    if (main != null) main.openSearch()
-                    else CRouter.with(requireActivity()).url(RoutePath.SEARCH).start()
-                }.apply {
-                    background = ripple(color(R.color.card_bg), 22)
-                    setTextColor(color(R.color.common_text_h1_color))
-                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)).apply { topMargin = dp(16) })
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(heroCover, LinearLayout.LayoutParams(dp(100), dp(100)))
-        }
+        val hero = CloudFeaturedHero(requireContext(), onDiscover = {
+            val main = activity as? MainActivity
+            if (main != null) main.openSearch()
+            else CRouter.with(requireActivity()).url(RoutePath.SEARCH).start()
+        }, onPlay = { track -> play(track) })
         results?.addView(hero)
         heading("Explore")
         discoveryNavigation()
@@ -335,9 +313,7 @@ abstract class CloudBrowseFragment : BaseMusicFragment() {
                 launch {
                     try {
                         val trending = metadata.trending()
-                        trending.items.firstOrNull()?.let { featured ->
-                            if (featured.artwork.isNotBlank()) heroCover.load(featured.artwork, dp(12))
-                        }
+                        hero.submit(trending.items)
                         inSection(trendingSlot) {
                             trendingSlot.removeAllViews(); heading("Trending now")
                             if (trending.items.isEmpty()) results?.addView(label("No trending tracks right now.", 14f, secondary = true))

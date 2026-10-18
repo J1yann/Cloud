@@ -1,0 +1,10 @@
+<resources>
+    <string name="hero_eyebrow">DISCOVER SOMETHING NEW</string>
+    <string name="hero_title">Find your\nnext favorite.</string>
+    <string name="hero_subtitle">Fresh sounds. Hidden gems.</string>
+    <string name="hero_placeholder_title">Your next favorite awaits</string>
+    <string name="hero_placeholder_artist">Explore music on Cloud</string>
+    <string name="hero_discover">Explore</string>
+    <string name="hero_play">Play</string>
+    <string name="hero_play_track">Play %1$s by %2$s</string>
+</resources>
