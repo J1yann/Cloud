@@ -364,8 +364,11 @@ class PlayingActivity : BaseMusicActivity() {
             if (!isDestroyed && !isFinishing && isAmoled && playerController.currentSong.value?.mediaId == mediaId) {
                 viewBinding.flBackground.background = GradientDrawable(
                     GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(ColorUtils.blendARGB(Color.BLACK, tint, 0.18f),
-                        ColorUtils.blendARGB(Color.BLACK, tint, 0.05f), Color.BLACK)
+                    // Keep the cover's color visible behind both artwork and lyrics,
+                    // then fade to black around the playback controls.
+                    intArrayOf(ColorUtils.blendARGB(Color.BLACK, tint, 0.42f),
+                        ColorUtils.blendARGB(Color.BLACK, tint, 0.22f),
+                        ColorUtils.blendARGB(Color.BLACK, tint, 0.07f), Color.BLACK)
                 )
             }
         }
